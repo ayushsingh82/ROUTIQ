@@ -1,35 +1,22 @@
 "use client";
 
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useState } from "react";
+import { useAccount, useSignMessage } from "wagmi";
 import { getJson, useCatalog } from "../hooks";
-import { manifestMessageClient, toHexUtf8 } from "@/lib/routiq/manifestClient";
+import { manifestMessageClient } from "@/lib/routiq/manifestClient";
 import { Badge, Button, Card, CardHeader, Input, Textarea, ms } from "../ui";
-
-type Eth = { request: (a: { method: string; params?: unknown[] }) => Promise<unknown> };
-const getEth = () => (window as unknown as { ethereum?: Eth }).ethereum;
 
 export function Nodes() {
   const { data, reload } = useCatalog(15_000);
-  const [account, setAccount] = useState<string | null>(null);
+  const { address: account } = useAccount();
+  const { signMessageAsync } = useSignMessage();
   const [form, setForm] = useState({ providerId: "", name: "", endpoint: "https://", models: "model-id, 0.10, 0.20", chat: true, streaming: true });
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
 
-  async function connect() {
-    const eth = getEth();
-    if (!eth) return setResult({ ok: false, text: "No EIP-1193 wallet found (install MetaMask or similar)." });
-    try {
-      const a = (await eth.request({ method: "eth_requestAccounts" })) as string[];
-      setAccount(a[0] ?? null);
-      setResult(null);
-    } catch (e) {
-      setResult({ ok: false, text: e instanceof Error ? e.message : String(e) });
-    }
-  }
-
   async function register() {
-    const eth = getEth();
-    if (!eth || !account) return;
+    if (!account) return;
     setBusy(true);
     setResult(null);
     try {
@@ -39,7 +26,7 @@ export function Nodes() {
       });
       const manifest = { providerId: form.providerId.trim(), name: form.name.trim(), walletAddress: account, endpoint: form.endpoint.trim(), models, capabilities: [form.chat && "chat", form.streaming && "streaming"].filter(Boolean) as string[], updatedAt: Date.now() };
       const message = await manifestMessageClient(manifest);
-      const signature = (await eth.request({ method: "personal_sign", params: [toHexUtf8(message), account] })) as string;
+      const signature = await signMessageAsync({ message });
       const r = await getJson<{ providerId: string; manifestHash: string }>("/api/v1/providers/register", undefined, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ manifest, signature }) });
       setResult({ ok: true, text: `Registered ${r.providerId}. Manifest sha256 ${r.manifestHash.slice(0, 16)}…` });
       reload();
@@ -88,7 +75,7 @@ export function Nodes() {
       </Card>
 
       <Card>
-        <CardHeader title="Register a provider" sub="Sign a manifest with your wallet. We verify the signature, the endpoint's safety, and that it really serves the models." right={account ? <Badge tone="ok">{account.slice(0, 8)}…{account.slice(-4)}</Badge> : <Button size="sm" onClick={connect}>Connect wallet</Button>} />
+        <CardHeader title="Register a provider" sub="Sign a manifest with your wallet. We verify the signature, the endpoint's safety, and that it really serves the models." right={<ConnectButton chainStatus="none" showBalance={false} />} />
         <div className="grid gap-4 p-5 md:grid-cols-2">
           <label className="block text-xs">
             <span className="mb-1.5 block text-[10px] uppercase tracking-wider text-muted-foreground">Provider ID</span>

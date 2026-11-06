@@ -1,5 +1,6 @@
 "use client";
 
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, type ReactNode } from "react";
@@ -106,11 +107,14 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
         <div className="min-w-0 flex-1">
           <header className="flex h-14 items-center justify-between border-b border-neutral-900 px-6 md:px-8">
             <h1 className="text-sm font-medium text-white">{current.label}</h1>
+            <div className="flex items-center gap-3">
+            <ConnectButton chainStatus="icon" showBalance={false} accountStatus="address" />
             <Link href="/app/keys" className="flex items-center gap-2.5 rounded-full border border-neutral-800 py-1 pl-1 pr-3 text-sm text-neutral-300 transition hover:bg-neutral-950" title="Your session API key">
               <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald-400 text-[11px] font-semibold text-black">{initials}</span>
               <span className="hidden sm:inline">{!session.ready ? "starting…" : session.key ? `${session.key.slice(0, 12)}…` : "no key"}</span>
               <span className="text-neutral-600">▾</span>
             </Link>
+            </div>
           </header>
           <div className="px-6 py-10 md:px-8">
             <div className="mb-10">
