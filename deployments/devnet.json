@@ -1,0 +1,10 @@
+{
+  "chainId": 1337,
+  "token": "0x0f39f215cab2f07323b9e2f4abcb91d73e2ba5a4",
+  "registry": "0xdf72128dfdc7bfe94013ed726844a2c3e8c3d472",
+  "paymaster": "0x0ec2e37137325adda883ce8f1e50786aa90aeb3a",
+  "vault": "0x78a200cd6afc5ebf675199f80d906daa8bf40046",
+  "agent": "0xf2141cb1BBc167b4D95B86cf152c8fc156b5fEdD",
+  "deployer": "0x2BedF4923b725B86767EC24bc98A89a6b85A2570",
+  "deployedAt": "2026-11-06T09:28:57.191Z"
+}

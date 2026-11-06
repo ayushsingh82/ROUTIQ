@@ -1,106 +1,314 @@
-# StealthRadar
+<div align="center">
 
-**Discover every stealth payment meant for you, without revealing your wallet identity to your RPC provider.**
+# ROUTIQ
 
-A self-custodial ERC-5564 stealth-payment inbox. Keys, scanning and matching run entirely in your browser. Every chain read goes through [Anon-RPC](https://ethereum.github.io/anon-rpc/) over a genuine anonymizing network (Nox / tor-js / Nym), and the app **fails closed**: if the anonymizing worker isn't ready, it refuses to read the chain instead of silently falling back to a normal RPC.
+**One API. Every model. No single gatekeeper.**
 
-Built for ETHGlobal Mumbai — Ethereum Foundation, *Best Use of Anon-RPC*.
+Privacy-aware AI inference and programmable payments for AI agents.
 
-## Why
+An OpenAI-compatible router over many models, spending policies enforced by the account itself,
+and Ethereum reads that don't leak who is asking.
 
-Stealth addresses hide *who* a payment is for. But the receiver still has to look things up (announcements, balances, receipts) — and a normal RPC provider sees your IP next to every address you query, quietly re-linking you to your stealth addresses. Anon-RPC removes that link.
+<sub>Built for ETHGlobal Mumbai · Tracks: **Best Use of Anon-RPC** · **Best Use of Frame Transactions / Alternative Mempool**</sub>
 
-## How it works
+</div>
 
+![ROUTIQ landing page](docs/assets/landing.png)
+
+---
+
+## What ROUTIQ is
+
+AI agents increasingly need to buy inference. Handing an agent an API key or a wallet is a blank cheque, and the usual
+aggregators are single gatekeepers that see everything. ROUTIQ is the layer in between:
+
+| Layer | What it does | Status |
+|---|---|---|
+| **Gateway** | OpenAI-compatible `/v1/chat/completions` (streaming), `/v1/models`, usage, API keys, rate limits | **Live** |
+| **Router** | Cheapest / fastest / balanced provider selection, explained; same-model failover only when allowed | **Live** |
+| **Providers** | NEAR AI Cloud (57 chat models from 9 vendors, live prices), local Ollama, reference nodes, wallet-signed operator registration | **Live** |
+| **Privacy** | Browser Ethereum reads through a real [Anon-RPC](https://ethereum.github.io/anon-rpc/) network, fail-closed, honest counters | **Live** |
+| **Agent vault + ERC-20 paymaster** | Per-request cap, daily quota and provider allowlist enforced in Frame Transaction validation on the Alt-Mempool devnet | **In progress** (nothing is simulated; see [Roadmap](#roadmap)) |
+
+> **Honesty rules we hold ourselves to:** no fake metrics, no fake transactions, no silent model swaps, no silent fallback from
+> Anon-RPC to a direct RPC, and offchain usage accounting is never presented as an onchain payment. Unfinished work is labelled
+> unfinished in the UI, in the docs and here.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/assets/playground.png" alt="Playground with routing preview"/><br/><sub><b>Playground</b> — streamed completion, routing preview, cost / tokens / latency per response</sub></td>
+<td width="50%"><img src="docs/assets/usage.png" alt="Usage dashboard"/><br/><sub><b>Usage</b> — real metering from provider-reported tokens</sub></td>
+</tr>
+</table>
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Clients
+    A["AI agent / app<br/>(OpenAI SDK)"]
+    B["Browser console"]
+  end
+
+  subgraph ROUTIQ["ROUTIQ gateway · Next.js route handlers"]
+    G["/v1 API<br/>hashed keys · rate limits · SSRF guard"]
+    R["Routing engine<br/>cheapest · fastest · balanced"]
+    U["Usage meter<br/>offchain accounting"]
+    H["Health probes<br/>live /models checks"]
+    REG["Provider registry<br/>wallet-signed manifests"]
+  end
+
+  subgraph Providers
+    N["NEAR AI Cloud<br/>57 models · 9 vendors"]
+    O["Ollama<br/>local model"]
+    P["Reference nodes<br/>Alpha · Beta"]
+    X["Operator-registered<br/>public HTTPS nodes"]
+  end
+
+  A -->|Bearer key| G
+  B --> G
+  G --> R
+  R -->|chosen provider| N
+  R --> O
+  R --> P
+  R --> X
+  R --> U
+  H -. probes .-> N
+  H -. probes .-> O
+  H -. probes .-> P
+  REG --> R
 ```
-Sender wallet ──ETH──▶ one-time stealth address
-              └─announce()─▶ ERC-5564 Announcer (0x5564…5564)
 
-Browser (this app)
-  Anon-RPC worker (hash-pinned, sandboxed) ──anonymizing network──▶ RPC ──▶ Ethereum
-        ▲ eth_getLogs / eth_getBalance / eth_blockNumber …
-  Local engine: view-tag filter → full address derivation → payment verification → encrypted IndexedDB
+Two planes are deliberately separate, because **Anon-RPC is a browser technology and cannot anonymise server-side calls**:
+
+```mermaid
+flowchart TB
+  subgraph inference["Inference plane · server"]
+    I1["Agent request"] --> I2["Gateway · router"] --> I3["Provider"]
+  end
+  subgraph settlement["Settlement & privacy plane · browser"]
+    S1["Console / agent UI"] --> S2["Anon-RPC worker<br/>sandboxed, hash-pinned"] --> S3["Anonymising network<br/>Nox · tor-js · Nym"] --> S4["Alt-Mempool devnet RPC<br/>chain 1337"]
+  end
+  inference -. "prompts are visible to the gateway and the provider" .- settlement
 ```
 
-1. **Identity** — spending + viewing keys generated locally, encrypted (PBKDF2-SHA256 600k → AES-256-GCM) in IndexedDB. Meta-address `st:eth:0x<spendPub><viewPub>`.
-2. **Send** — derive a stealth address from a meta-address, transfer ETH, then publish the announcement (two txs).
-3. **Scan** — chunked `eth_getLogs` through Anon-RPC (auto-halves the range on provider limits), dedupe by `txHash:logIndex`, 12-block reorg overlap on incremental scans.
-4. **Match** — scheme-1 view tag (≈1/256 pass) is only a pre-filter; a match requires the *derived address to equal the announced address*.
-5. **Verify** — an announcement is not a payment. We mark `verified` only when the stealth address's on-chain balance supports the announced amount; otherwise `matched, payment unverified`. Metadata is treated as an attacker-controlled hint.
+### Request lifecycle
 
-## Run it
+```mermaid
+sequenceDiagram
+  autonumber
+  participant C as Client (OpenAI SDK)
+  participant G as ROUTIQ gateway
+  participant R as Router
+  participant P1 as Provider A
+  participant P2 as Provider B (same model)
+
+  C->>G: POST /v1/chat/completions (Bearer key, routiq: {mode})
+  G->>G: verify key hash · rate limit · validate body (≤ 1 MB)
+  G->>R: candidates for the requested model (live health + prices)
+  R->>R: score cost · latency · availability · reputation (neutral if unmeasured)
+  R-->>G: ordered chain [A, B] (fallback only if allowed, same model only)
+  G->>P1: forward request (stream_options.include_usage)
+  alt provider fails (5xx / timeout / 429)
+    P1--xG: error
+    G->>P2: retry on the next provider
+    P2-->>G: stream
+  else ok
+    P1-->>G: stream
+  end
+  G-->>C: SSE passthrough + `: routiq {provider, tokens, cost, latency}` comment
+  G->>G: meter provider-reported tokens → usage ledger + routing history
+```
+
+### How a provider is chosen
+
+```mermaid
+flowchart TD
+  Q["Requested model + policy"] --> D["Discover providers that really list the model<br/>(live /models probe)"]
+  D --> F{"Eligible?"}
+  F -->|"provider down · API key missing · bad price"| X["Excluded, with the reason shown"]
+  F -->|yes| S["Score: cost 40% · latency 30% · availability 20% · reputation 10%<br/>unmeasured signals = neutral 0.5, labelled"]
+  S --> M{"Mode"}
+  M -->|cheapest| C1["lowest estimated cost"]
+  M -->|fastest| C2["lowest measured probe latency"]
+  M -->|balanced| C3["highest weighted score"]
+  C1 --> P["Pinned provider? use only that one"]
+  C2 --> P
+  C3 --> P
+  P --> O["Chain of providers to try<br/>never a different model"]
+```
+
+---
+
+## Anon-RPC: private Ethereum reads (verified in a real browser)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Console (browser)
+  participant B as Bootstrap RPC
+  participant W as Anon-RPC worker<br/>(sandboxed iframe)
+  participant N as Anonymising network<br/>(Nox)
+  participant D as Devnet RPC (chain 1337)
+
+  UI->>B: one-time read of the worker specifier contract (NOT anonymised, counted separately)
+  B-->>UI: workerHash + resolvers
+  UI->>W: load bundle, verify keccak256 == pinned hash, run in sandbox
+  Note over UI,W: Fail-closed: no worker ⇒ no chain reads (no silent direct fallback)
+  UI->>W: eth_chainId (guard) + eth_blockNumber / eth_getCode …
+  W->>N: request over the mixnet
+  N->>D: exit node fetches the RPC on the user's behalf
+  D-->>UI: result (the RPC sees the exit node, not the user's IP)
+```
+
+What we measured (headless Chrome, real Nox network, public devnet): **block 1478 read through Nox in 3.7 s · 2 anonymised reads · 0 direct reads · 2 counted bootstrap reads**,
+staking registry confirmed deployed (1259 bytes) and the sidecar answering. Reproduce with `npm run check:anon`.
+
+**Anon-RPC does not:** hide prompts · anonymise server-side calls · anonymise transaction submission · make chain data private.
+The Privacy Center has a side-by-side "what does the RPC provider see?" test (direct vs. through the network).
+
+---
+
+## Frame Transactions + Alternative Mempool
+
+[EIP-8141](https://eips.ethereum.org/EIPS/eip-8141) lets the *account's own code* decide whether a transaction is valid. The Alternative Mempool
+([ERC-8421](https://docs.altmempool.wtf/)) admits validation that the canonical mempool rejects — notably **a staked sender reading other contracts' storage**.
+
+```mermaid
+flowchart TD
+  T["Frame Transaction (type 0x06)"] --> F0["Frame 0 · VERIFY<br/>runs in static mode, must call APPROVE"]
+  T --> F1["Frame 1 · SENDER<br/>executes as the account"]
+  T --> SIG["Signature · secp256k1 over the sig-hash"]
+  F0 --> V{"Account validation"}
+  V -->|"owner signature ok (SIGPARAM)"| P1["per-request cap · daily quota<br/>(account's OWN storage — always allowed)"]
+  V --> P2["payee is an active provider?<br/>(reads ProviderRegistry — EXTERNAL storage)"]
+  P2 -->|"unstaked sender"| REJ["Canonical mempool rejects"]
+  P2 -->|"staked sender"| ADM["Alt Mempool admits"]
+  P1 --> APP["APPROVE(execution + payment)"]
+  ADM --> APP
+  APP --> EX["SENDER frame: payProvider(provider, amount)<br/>updates the daily counter"]
+```
+
+Submission and status on the devnet (documented, see [`docs/DEVNET_RESEARCH.md`](docs/DEVNET_RESEARCH.md)):
+
+```mermaid
+flowchart LR
+  A["build frames + sign"] --> B["eth_sendFrameTransaction<br/>(sidecar /rpc)"]
+  B --> C["ethrex_simulateFrameTransaction<br/>admission rules per role"]
+  C -->|rule violation| X["rejected with a rule id"]
+  C -->|ok| D["Alt-Mempool · gossip"]
+  D --> E["relay to the miner"]
+  E --> F["included in a block"]
+  F --> G["status: OnChain / Reverted<br/>eth_getFrameTransactionReceipt"]
+```
+
+**Status:** the devnet is reachable (read through Anon-RPC), the staking registry and the sidecar are verified live, and the design above is documented
+against the real rules. The vault/paymaster contracts and the first real Frame Transaction are **in progress**, blocked on verifying that
+`FRAMEPARAM` / `FRAMEDATACOPY` work inside VERIFY frames on this devnet and on tooling approval. Until they are on chain, the UI says "not deployed".
+
+---
+
+## Quick start
+
+Requirements: Node 20+ (tested on 24), npm. Optional: [Ollama](https://ollama.com) for a free local model.
 
 ```bash
 npm install
-npm test            # unit tests: crypto, vault, scanner, provider-view — 18 tests
-npm run e2e:local   # full flow on an anvil fork of Sepolia (needs Foundry): pay → announce → scan → verify → spend
-npm run live:scan   # read-only sanity scan of real Sepolia announcements
-npm run smoke       # real-browser smoke test (see Testing)
-npm run e2e:browser # full UI payment flow on an anvil fork
-npx next dev -p 3100
+cp .env.example .env.local          # then put your keys in .env.local (never commit it)
+npm run dev                          # http://localhost:3100  (use: npx next dev -p 3100)
 ```
 
-Open http://localhost:3100
+Optional providers for a richer demo:
 
-### Reproduce the end-to-end demo (Sepolia)
-1. **Identity** → create a vault (password) → copy the meta-address.
-2. **Privacy** → pick **Nox** → *Start worker*. Wait for `ready`. (Try tor-js if Nox is busy.)
-3. **Send** → with a *different* wallet (MetaMask, Sepolia ETH from a faucet) → paste the meta-address → pay 0.001 ETH. Two txs are shown.
-4. **Scan & Inbox** → *Start scan* (leave start block blank or use a block just before your tx). Watch the counters: announcements → view-tag passes → full matches.
-5. The payment appears as **verified**. In the Privacy tab, check *Via Anon-RPC* vs *Direct reads (0)* vs *Bootstrap (1–2)*.
-6. In the browser's Network tab, confirm no keys appear in any request.
+```bash
+ollama pull smollm2:135m             # a tiny real local model (~270 MB)
+npm run provider:alpha               # reference node on :4101 → Ollama
+npm run provider:beta                # reference node on :4102 → Ollama
+```
 
-**Provider's view** tab: sends the same request directly and through Anon-RPC to an echo endpoint (httpbin by default, throwaway address only) and shows the IP, headers and query the provider observed on each side.
+Set `NEAR_AI_API_KEY` in `.env.local` to activate [NEAR AI Cloud](https://cloud-api.near.ai/docs) (57 chat models; prices come from its live catalogue).
+Without a key it is listed as **not configured** and never as "up".
 
-`/spike` is a minimal harness that proves a real network can carry `eth_blockNumber` and `eth_getLogs`.
+### Use it like OpenAI
+
+```bash
+curl http://localhost:3100/v1/chat/completions \
+  -H "Authorization: Bearer $ROUTIQ_API_KEY" -H "Content-Type: application/json" \
+  -d '{"model":"openai/gpt-5-nano","messages":[{"role":"user","content":"Hello"}],"routiq":{"mode":"cheapest"}}'
+```
+
+```ts
+import OpenAI from "openai";
+const client = new OpenAI({ apiKey: process.env.ROUTIQ_API_KEY, baseURL: "http://localhost:3100/v1" });
+const r = await client.chat.completions.create({ model: "Qwen/Qwen3.8-27B", messages: [{ role: "user", content: "Hello" }] });
+```
+
+Create a key in the console (**API keys**) or `POST /api/v1/developer/keys`. Routing hints go in an optional `routiq` field
+(`mode: "cheapest" | "fastest" | "balanced"`, `provider`, `fallback`). Every response carries `x-routiq-provider`, `x-routiq-cost-usd`,
+`x-routiq-latency-ms`, `x-routiq-request-id`; streams end with an SSE comment `: routiq {...}` that SDKs ignore.
+
+### API surface
+
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `POST /v1/chat/completions` | key | OpenAI-compatible, streaming, routed |
+| `GET /v1/models` | key | Models with the providers that serve them |
+| `GET /v1/usage?days=30` | key | Totals, per-day buckets, per-model / per-provider |
+| `POST /api/v1/routing/preview` | key | Which provider *would* be chosen and why |
+| `GET /api/v1/routing/history` | key | Past routing decisions |
+| `GET/POST/DELETE /api/v1/developer/keys` | admin token (optional) | Create / list / revoke keys |
+| `POST /api/v1/providers/register`, `PATCH /api/v1/providers/:id` | wallet signature | Operator registration (EIP-191) |
+| `GET /api/v1/public/catalog`, `/public/stats`, `/providers` | none | Marketplace, aggregate stats |
+
+---
+
+## Security & privacy model
+
+- **API keys** are shown once; only a SHA-256 hash is stored; revocable; per-key rate limit; constant-time comparison.
+- **SSRF protection** on every provider endpoint (registration and health checks): public http(s) only, no credentials in URLs, no localhost / private ranges / cloud-metadata, DNS results re-checked, redirects refused, hard timeouts and size caps. Local development providers are allowed only when flagged in config.
+- **Provider registration** requires a wallet signature over a canonical manifest hash, a fresh timestamp (replay protection), and an endpoint that *really serves* the declared models. Updates need a newer manifest from the same wallet.
+- **No secrets in the browser.** Upstream keys (e.g. `NEAR_AI_API_KEY`) live in server env only. `.env*` is gitignored.
+- **What providers can see:** prompts. ROUTIQ does not claim prompt privacy; NEAR AI Cloud and any provider you route to can read what you send.
+- **Offchain accounting:** token usage and cost are measured from provider-reported usage (flagged `est` if the provider omits it) and recorded offchain. They are not onchain settlements.
+
+---
 
 ## Testing
 
-| Layer | Command | Covers |
-|---|---|---|
-| Unit | `npm test` | ERC-5564 derivations (cross-checked with viem), vault encryption/tamper/backup, scanner chunking/dedupe/abort, verification rules, echo parsing |
-| Local E2E | `npm run e2e:local` | Real Announcer contract on an anvil fork of Sepolia: transfer + `announce()`, chunked scan, view-tag → full match, idempotent rescan, a second user matching only their own payment, unfunded announcement stays *unverified*, and **spending from the stealth address with the derived key** |
-| Live read | `npm run live:scan` | Real Sepolia `eth_getLogs` decoding with a random key (expects 0 matches) |
-| Browser smoke | `npm run build && npx next start -p 3101` then `npm run smoke` (add `WORKER=1` for a real Anon-RPC network) | Headless Chrome via DevTools: brand colors, create identity, encrypted vault in IndexedDB (no plaintext keys), lock/unlock/wrong password, persistence across reload, **fail-closed scanning**, send validation, Provider's view; with `WORKER=1`: starts **Nox**, shows two different IPs, scans live Sepolia through it and checks counters (Anon-RPC reads > 0, direct reads = 0, bootstrap counted) |
-| Browser E2E | `npm run e2e:browser` | The full payment flow **through the real UI** on an anvil fork: create identity → real stealth payment + announcement → scan → inbox shows the verified 0.25 ETH, the unfunded announcement stays *unverified*, rescan is idempotent, payments survive a reload |
-
-The tests caught two real bugs, both fixed: (1) viem caches the chain head for ~4 s, so a scan right after a payment stopped one block short (`cacheTime: 0`); (2) the scan could finish before the last match was verified and saved, so a found payment could be missing from the inbox and its cursor advanced early (scan now awaits all verifications, and any matched announcement without a verified payment is re-verified on the next scan).
-
-Note: scanning in **Direct** mode is possible only after you explicitly select it on the Privacy tab, and the UI shows a red warning. `NEXT_PUBLIC_RPC_OVERRIDE` is a build-time test knob used only by `e2e:browser`.
-
-## Threat model & honesty
-
-| What | Status |
-|---|---|
-| Announcements, stealth addresses, amounts, timing | **Public on-chain** |
-| Your IP ↔ the RPC endpoint | Hidden by the anonymizing network |
-| One-time bootstrap read of the Anon-RPC specifier contract | **Not anonymized** (counted separately in the UI) |
-| Wallet-broadcast sender txs (Send tab) | Sent by your wallet, **not** via Anon-RPC |
-| Malicious worker / network | Can observe, censor or lie (sandbox + on-chain hash pin narrow, don't remove, trust) |
-| `isolationKey` | Passed per call, but support varies by network — **we make no unlinkability claim** |
-| Viewing / spending keys | Never leave the browser: not in RPC calls, worker config, logs or any server (there is no backend) |
-| Withdrawal from stealth addresses | **Not implemented** (deliberately — no unsafe signing code) |
-| ERC-20 / USDC | Matched, but shown as *unverified / unsupported* for now |
-
-Known limits: balance-based verification can't attribute funds to a specific tx without trace APIs, and a swept address shows as unverified. The ERC leaves the hash `h` abstract; we use keccak256 of the shared point's x-coordinate (self-consistent and cross-checked against viem for address derivation, but **not yet interop-tested against other stealth tools**). Matching runs on the main thread (a Web Worker is a planned improvement).
-
-## Layout
-
-```
-src/lib/crypto     ERC-5564 scheme 1 (noble secp256k1/keccak)
-src/lib/erc5564    constants, metadata codec
-src/lib/vault      PBKDF2→AES-GCM vault, auto-lock session
-src/lib/anon-rpc   network registry + worker manager (fail-closed, honest counters)
-src/lib/rpc        the ONLY JSON-RPC client (viem custom transport over the worker)
-src/lib/scanner    pure scan/match logic, payment verification, RPC bindings
-src/lib/sender     demo sender (transfer + announce)
-src/lib/db         IndexedDB (ciphertext + public records only)
+```bash
+npm run typecheck && npm run lint
+npm test                 # 20 unit tests: router, SSRF guard, signed manifests (browser/server parity), echo parser
+npm run build && npx next start -p 3101
+npm run smoke            # real-browser run of the whole UI incl. a live streamed completion (needs Ollama)
+npm run check:anon       # real Nox network → devnet reads, fail-closed check, counters
+npm run check:registration   # live rejection paths for provider registration (SSRF, bad signatures, replays)
 ```
 
-## AI usage
+Verified end to end: live NEAR AI Cloud completion with correct cost from provider usage · same-model failover (provider A returns 503 → served by B, flagged in headers) and a clean 502 when fallback is disabled ·
+hashed keys, revocation and rate limits · streaming with metering · Anon-RPC reads of the devnet in a real browser.
 
-Built with Claude Code (Anthropic). Specs, product brief and build plan are in [`docs/`](docs).
+---
+
+## Project layout
+
+```
+src/app/                     Next.js App Router: landing, /models /providers /stats, /app (console), /api/v1
+src/lib/routiq/              router, pricing, SSRF guard, provider discovery, keys, usage, signed manifests (+ tests)
+src/lib/anon-rpc/            Anon-RPC worker manager, network registry, honest counters
+src/lib/rpc/client.ts        the only JSON-RPC client (central, chain-guarded, fail-closed)
+src/components/rq/           design system, site shell, landing, console pages
+scripts/                     reference provider node, browser tests, Anon-RPC / registration checks
+docs/routiq/                 briefs, verified findings, implementation plan, pitch
+docs/DEVNET_RESEARCH.md      verified Alt-Mempool devnet configuration
+docs/IMPLEMENTATION_AUDIT.md what exists, what works, what is blocked
+```
+
+## Disclaimer
+
+Hackathon software. It runs against a **public throwaway devnet** (chain 1337) that can be reset at any time. It is not audited and must not be used with real funds.
 
 ## License
 
-MIT
+MIT — see [`LICENSE`](LICENSE).
