@@ -9,3 +9,7 @@ interface IERC20Min {
 interface IProviderRegistry {
     function isActive(address payTo) external view returns (bool);
 }
+
+interface IStakingRegistry {
+    function addStake(uint32 unstakeDelaySec) external payable;
+}

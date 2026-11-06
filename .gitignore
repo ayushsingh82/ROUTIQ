@@ -48,3 +48,8 @@ next-env.d.ts
 
 # third-party reference snapshots (study only, never shipped)
 /reference/
+
+# Foundry build output
+/contracts/out/
+/contracts/cache/
+!.env.example

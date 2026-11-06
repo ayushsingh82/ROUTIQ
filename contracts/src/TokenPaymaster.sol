@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {HegotaSupport, Devnet, Scope, TxParam, FrameParam, FrameMode} from "@forshtat/hegota-support/contracts/HegotaSupport.sol";
-import {IERC20Min} from "./IERC20Min.sol";
+import {IERC20Min, IStakingRegistry} from "./IERC20Min.sol";
 
 /// Pays an agent's gas and is repaid in an ERC-20.
 ///
@@ -32,6 +32,12 @@ contract TokenPaymaster is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
     function setRate(uint256 tokensPerEth_) external {
         require(msg.sender == owner, "owner");
         tokensPerEth = tokensPerEth_;
+    }
+
+    /// Stakes this contract in the Alt-Mempool registry so it may read the token's storage during validation.
+    function stake(IStakingRegistry registry, uint256 value) external {
+        require(msg.sender == owner, "owner");
+        registry.addStake{value: value}(86400);
     }
 
     function withdraw(address to, uint256 amount) external {

@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {HegotaSupport, Devnet, Scope, TxParam, FrameParam, FrameMode, SigParam} from "@forshtat/hegota-support/contracts/HegotaSupport.sol";
-import {IERC20Min, IProviderRegistry} from "./IERC20Min.sol";
+import {IERC20Min, IProviderRegistry, IStakingRegistry} from "./IERC20Min.sol";
 
 /// An AI agent's spending account (EIP-8141 smart account).
 ///
@@ -18,6 +18,7 @@ contract AgentBudgetVault is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
     address public immutable owner; // the agent's signing key
     IERC20Min public immutable token;
     IProviderRegistry public immutable registry;
+    IStakingRegistry public immutable staking; // Alt-Mempool staking registry
     address public immutable paymaster; // the only address payFee may pay (address(0) = no sponsored gas)
 
     uint256 public perRequestCap;
@@ -32,14 +33,16 @@ contract AgentBudgetVault is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
     error Policy(string reason);
 
     bytes4 private constant PAY = bytes4(keccak256("pay(address,uint256)"));
+    bytes4 private constant STAKE_SELF = bytes4(keccak256("stakeSelf(uint256)"));
     bytes4 private constant NEW_DAY = bytes4(keccak256("newDay()"));
     bytes4 private constant PAY_FEE = bytes4(keccak256("payFee(address,uint256)"));
 
-    constructor(address owner_, IERC20Min token_, IProviderRegistry registry_, address paymaster_, uint256 perRequestCap_, uint256 dailyQuota_) payable {
+    constructor(address owner_, IERC20Min token_, IProviderRegistry registry_, address paymaster_, IStakingRegistry staking_, uint256 perRequestCap_, uint256 dailyQuota_) payable {
         owner = owner_;
         token = token_;
         registry = registry_;
         paymaster = paymaster_;
+        staking = staking_;
         perRequestCap = perRequestCap_;
         dailyQuota = dailyQuota_;
         day = block.timestamp / 1 days;
@@ -61,6 +64,13 @@ contract AgentBudgetVault is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
         require(to == paymaster && to != address(0), "paymaster");
         require(token.transfer(to, amount), "transfer");
         emit FeePaid(to, amount);
+    }
+
+    /// Stakes this account in the Alt-Mempool registry (the registry keys stake off msg.sender, so the account itself
+    /// must call it). A staked account may read other contracts' storage (the ProviderRegistry) during validation.
+    function stakeSelf(uint256 value) external {
+        require(msg.sender == address(this), "self only");
+        staking.addStake{value: value}(86400);
     }
 
     /// Starts a new accounting day (SENDER frame; VERIFY cannot read the clock).
@@ -108,6 +118,10 @@ contract AgentBudgetVault is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
             uint256 len = frameparam(i, FrameParam.DATA_LENGTH);
             if (len == 4) {
                 if (bytes4(framedatacopy(0, 4, i)) != NEW_DAY) revert Policy("unknown selector");
+                continue;
+            }
+            if (len == 36) {
+                if (bytes4(framedatacopy(0, 4, i)) != STAKE_SELF) revert Policy("unknown selector");
                 continue;
             }
             if (len != 68) revert Policy("bad calldata");
