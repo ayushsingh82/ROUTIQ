@@ -1,0 +1,22 @@
+{
+  "providers": [
+    {
+      "id": "ref-alpha",
+      "name": "Reference Provider Alpha",
+      "label": "reference",
+      "baseUrl": "http://127.0.0.1:4101/v1",
+      "allowLoopback": true,
+      "prices": { "*": { "inputPerM": 0.1, "outputPerM": 0.2, "category": "open-source" } },
+      "note": "Reference node (scripts/provider-node.mts) forwarding to a local model. Prices are this operator's declared demo prices, not live quotes."
+    },
+    {
+      "id": "ref-beta",
+      "name": "Reference Provider Beta",
+      "label": "reference",
+      "baseUrl": "http://127.0.0.1:4102/v1",
+      "allowLoopback": true,
+      "prices": { "*": { "inputPerM": 0.05, "outputPerM": 0.3, "category": "open-source" } },
+      "note": "Second reference node with a different declared price list. Demo prices, not live quotes."
+    }
+  ]
+}
