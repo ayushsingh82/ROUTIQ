@@ -1,0 +1,40 @@
+{
+  "name": "stealthradar",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "node --test --no-warnings src/lib/**/*.test.ts",
+    "e2e:local": "node --no-warnings scripts/e2e-local.mts",
+    "live:scan": "node --no-warnings scripts/live-sepolia-scan.mts",
+    "smoke": "node --no-warnings scripts/browser-smoke.mts",
+    "e2e:browser": "node --no-warnings scripts/browser-e2e.mts"
+  },
+  "dependencies": {
+    "@anon-rpc/browser-harness": "^0.4.0",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "@tanstack/react-query": "^5.106.1",
+    "idb": "^8.0.4",
+    "lucide-react": "^1.69.0",
+    "next": "16.4.5",
+    "qrcode.react": "^4.2.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "viem": "^2.57.16",
+    "wagmi": "^3.7.11"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.5",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
