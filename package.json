@@ -1,17 +1,20 @@
 {
-  "name": "stealthradar",
-  "version": "0.1.0",
+  "name": "routiq",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3100",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test --no-warnings src/lib/**/*.test.ts",
-    "e2e:local": "node --no-warnings scripts/e2e-local.mts",
-    "live:scan": "node --no-warnings scripts/live-sepolia-scan.mts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --no-warnings \"src/lib/**/*.test.ts\"",
+    "provider:alpha": "node --no-warnings scripts/provider-node.mts --name \"Reference Provider Alpha\" --port 4101",
+    "provider:beta": "node --no-warnings scripts/provider-node.mts --name \"Reference Provider Beta\" --port 4102",
     "smoke": "node --no-warnings scripts/browser-smoke.mts",
-    "e2e:browser": "node --no-warnings scripts/browser-e2e.mts"
+    "check:anon": "node --no-warnings scripts/anon-devnet-check.mts",
+    "check:registration": "node --no-warnings scripts/registration-check.mts",
+    "shot": "node --no-warnings scripts/shot.mts"
   },
   "dependencies": {
     "@anon-rpc/browser-harness": "^0.4.0",
@@ -36,5 +39,7 @@
     "eslint-config-next": "16.4.5",
     "tailwindcss": "^4",
     "typescript": "^5"
-  }
+  },
+  "description": "ROUTIQ \u2014 privacy-aware AI inference router and agent payment layer (OpenAI-compatible API, Anon-RPC reads, Alt-Mempool devnet)",
+  "license": "MIT"
 }

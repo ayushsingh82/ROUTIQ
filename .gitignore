@@ -41,4 +41,10 @@ yarn-error.log*
 next-env.d.ts
 
 # test-only bundle built by npm run e2e:browser
-/.next-e2e/
+/.next-*/
+
+# ROUTIQ local data (hashed API keys, usage, health)
+/.data/
+
+# third-party reference snapshots (study only, never shipped)
+/reference/
