@@ -3,7 +3,7 @@
 **Target prize:** Ethereum Foundation → *Best Use of Anon-RPC* ($2.5k / $1.5k / $1k)
 **One-liner:** Discover every stealth payment meant for you, without revealing your wallet identity to your RPC provider.
 **Companion docs:** [`SPEC.md`](./SPEC.md) (product + technical spec), [`BLUEPRINT.md`](./BLUEPRINT.md) (original build blueprint and Claude prompt).
-**App folder:** [`../stealthradar`](../stealthradar)
+**App:** the Next.js app is the repository root (`src/`, `scripts/`, `package.json`); all markdown lives in `docs/` plus the root `README.md`.
 
 ---
 
