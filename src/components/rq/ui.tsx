@@ -56,7 +56,7 @@ const tones: Record<Tone, string> = {
   accent: "border-white/30 text-white",
 };
 export function Badge({ tone = "neutral", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
-  return <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em]", tones[tone], className)}>{children}</span>;
+  return <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em]", tones[tone], className)}>{children}</span>;
 }
 
 const field = "w-full rounded-none border border-border bg-black px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-neutral-500";

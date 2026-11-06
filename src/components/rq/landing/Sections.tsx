@@ -38,7 +38,7 @@ export function Features() {
   const { data } = useCatalog();
   const t = data?.totals;
   const items = [
-    { title: "One OpenAI-compatible API", status: "live", body: t ? `${t.models} models from ${t.vendors} vendors through NEAR AI Cloud, plus local and reference providers. Change one base URL.` : "Hundreds of models behind one base URL.", href: "/models" },
+    { title: "One OpenAI-compatible API", status: "live", body: t ? `${t.models} models from ${t.vendors} vendors through hosted and local sources, plus local and reference providers. Change one base URL.` : "Hundreds of models behind one base URL.", href: "/models" },
     { title: "Routing you can inspect", status: "live", body: "Cheapest, fastest or balanced, with a preview of why a provider was chosen. Failover only to another provider of the same model — never a silent swap.", href: "/app/playground" },
     { title: "Private Ethereum reads", status: "live", body: "Browser reads go through a real Anon-RPC network, fail closed, with honest counters for anonymised, direct and bootstrap requests.", href: "/app/privacy" },
     { title: "Spending policy in the account", status: "in progress", body: "Vault and ERC-20 paymaster enforced by Frame Transaction validation on the Alt-Mempool devnet. Policy checks run in the account, not in our UI.", href: "/roadmap" },
@@ -118,13 +118,13 @@ export function Numbers() {
 }
 
 const STACK: [string, string][] = [
-  ["NEAR AI Cloud", "Hosted inference"],
   ["Anon-RPC", "Private reads"],
   ["EIP-8141", "Frame transactions"],
   ["Alt Mempool", "ERC-8421 rules"],
   ["Nox", "Mixnet network"],
   ["tor-js", "Tor in WASM"],
   ["Nym", "Mixnet network"],
+  ["NEAR AI Cloud", "First inference source"],
   ["Ollama", "Local models"],
   ["viem", "Ethereum client"],
   ["Next.js", "App shell"],
@@ -171,9 +171,6 @@ export function CTA() {
       <p className="mx-auto mt-6 max-w-xl text-neutral-500">Create an API key, send a request, and watch the routing decision, cost and latency come back with the response.</p>
       <div className="mt-10 flex flex-wrap justify-center gap-3">
         <LinkButton href="/app">Open the console</LinkButton>
-        <LinkButton href="/roadmap" variant="outline">
-          What&apos;s live, what&apos;s next
-        </LinkButton>
       </div>
     </section>
   );

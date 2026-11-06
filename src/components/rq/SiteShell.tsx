@@ -10,7 +10,6 @@ const LINKS = [
   { href: "/models", label: "Models" },
   { href: "/providers", label: "Providers" },
   { href: "/stats", label: "Stats" },
-  { href: "/roadmap", label: "Roadmap" },
 ];
 
 export function SiteHeader() {
@@ -64,7 +63,7 @@ export function SiteHeader() {
 }
 
 const COLS: { title: string; links: [string, string, boolean?][] }[] = [
-  { title: "Explore", links: [["Models", "/models"], ["Providers", "/providers"], ["Network stats", "/stats"], ["Roadmap", "/roadmap"]] },
+  { title: "Explore", links: [["Models", "/models"], ["Providers", "/providers"], ["Network stats", "/stats"]] },
   { title: "Developers", links: [["Console", "/app"], ["Playground", "/app/playground"], ["API keys", "/app/keys"], ["Privacy Center", "/app/privacy"]] },
   { title: "Built on", links: [["Anon-RPC", "https://ethereum.github.io/anon-rpc/", true], ["EIP-8141", "https://eips.ethereum.org/EIPS/eip-8141", true], ["Alternative Mempools", "https://docs.altmempool.wtf/", true], ["NEAR AI Cloud", "https://cloud-api.near.ai/docs", true]] },
 ];
@@ -75,7 +74,7 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
           <Logo />
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-neutral-500">One API. Every model. No single gatekeeper. Privacy-aware inference and programmable payments for AI agents.</p>
+          <p className="mt-4 max-w-xs text-sm leading-relaxed text-neutral-500">One API. Every model. No single gatekeeper. Private Ethereum reads over Anon-RPC and programmable agent payments with Frame Transactions.</p>
         </div>
         {COLS.map((c) => (
           <div key={c.title}>
@@ -98,9 +97,18 @@ export function SiteFooter() {
           </div>
         ))}
       </div>
-      <div className="border-t border-neutral-900">
-        <p className="mx-auto max-w-6xl px-6 py-6 text-xs leading-relaxed text-neutral-600">
-          Hackathon software (ETHGlobal Mumbai). Runs against a public throwaway devnet; not audited; do not use with real funds. Anon-RPC protects supported Ethereum reads only — it does not hide prompts from inference providers.
+      <div className="relative overflow-hidden border-t border-neutral-900 select-none" aria-hidden>
+        <div className="pointer-events-none absolute left-1/2 top-0 h-2/3 w-3/4 -translate-x-1/2 rounded-full bg-emerald-400/20 blur-[110px]" />
+        <p
+          className="relative mx-auto max-w-[110rem] whitespace-nowrap px-4 pb-6 pt-6 text-center font-semibold leading-[1] tracking-tighter text-transparent"
+          style={{
+            fontSize: "clamp(5rem, 25vw, 27rem)",
+            backgroundImage: "linear-gradient(180deg, #ffffff 0%, #d4d4d4 35%, #6ee7b7 75%, rgba(52,211,153,0) 100%)",
+            WebkitBackgroundClip: "text",
+            backgroundClip: "text",
+          }}
+        >
+          routiq
         </p>
       </div>
     </footer>

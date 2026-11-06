@@ -7,6 +7,7 @@ import { getJson, useCatalog } from "../hooks";
 import { Badge, Card, CardHeader, LinkButton, Stat, compact, ms, usd } from "../ui";
 import { useConsoleKey } from "./ConsoleShell";
 import type { RoutingRow, UsageResponse } from "./types";
+import { ActivityChart, FrameTxProof, PrivacyMeter, ProviderHealth, SpendByProvider } from "./Widgets";
 
 export function Overview() {
   const { key, ready } = useConsoleKey();
@@ -40,7 +41,7 @@ export function Overview() {
     { label: "At least one provider up", ok: catalog ? up > 0 : null, detail: catalog ? `${up} up` : "checking…", href: "/app/nodes" },
     { label: "NEAR AI Cloud configured", ok: near ? near.configured : null, detail: near ? (near.configured ? `${near.modelCount} models available` : "set NEAR_AI_API_KEY in .env.local and restart") : "checking…", href: "/app/nodes" },
     { label: "Anon-RPC worker ready", ok: privateReady, detail: privateReady ? `${anon.networkId} · ${anon.anonRequests} anonymised reads` : "start a network in the Privacy Center", href: "/app/privacy" },
-    { label: "Agent vault deployed", ok: false, detail: "devnet work in progress — see roadmap", href: "/roadmap" },
+    { label: "Agent vault deployed", ok: false, detail: "devnet work in progress", href: "/app/agent" },
   ];
 
   return (
@@ -52,7 +53,31 @@ export function Overview() {
         <Stat label="Providers up" value={catalog ? `${up}/${catalog.totals.providers}` : "—"} tone={up > 0 ? "ok" : "bad"} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <ActivityChart rows={usage?.recent ?? []} />
+        <SpendByProvider byProvider={usage?.summary.byProvider ?? {}} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <PrivacyMeter anon={anon.anonRequests} direct={anon.directRequests} bootstrap={anon.bootstrapRequests} ready={privateReady} network={anon.networkId ?? null} />
+        <FrameTxProof />
+        <Card>
+          <CardHeader title="Quick actions" />
+          <div className="grid gap-3 p-5">
+            <LinkButton href="/app/playground">Send a request</LinkButton>
+            <LinkButton href="/app/keys" variant="outline">
+              Create an API key
+            </LinkButton>
+            <LinkButton href="/app/privacy" variant="outline">
+              Start Anon-RPC
+            </LinkButton>
+          </div>
+        </Card>
+      </div>
+
+      {catalog && <ProviderHealth providers={catalog.providers} />}
+
+      <div className="grid gap-4">
         <Card>
           <CardHeader title="Setup checks" sub="Live checks, not a static checklist." />
           <ul className="divide-y divide-border">
@@ -73,21 +98,6 @@ export function Overview() {
               </li>
             ))}
           </ul>
-        </Card>
-        <Card>
-          <CardHeader title="Quick actions" />
-          <div className="grid gap-3 p-5">
-            <LinkButton href="/app/playground">Send a request</LinkButton>
-            <LinkButton href="/app/keys" variant="outline">
-              Create an API key
-            </LinkButton>
-            <LinkButton href="/app/privacy" variant="outline">
-              Start Anon-RPC
-            </LinkButton>
-            <LinkButton href="/models" variant="ghost">
-              Browse models
-            </LinkButton>
-          </div>
         </Card>
       </div>
 

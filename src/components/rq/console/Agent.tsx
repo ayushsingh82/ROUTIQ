@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { TARGET_CHAIN } from "@/lib/anon-rpc/networks";
 import { rpcRequest } from "@/lib/rpc/client";
-import { Badge, Button, Card, CardHeader, LinkButton, Stat } from "../ui";
+import { Badge, Button, Card, CardHeader, Stat } from "../ui";
 import { useAnon } from "./useAnon";
 
 // NaiveStakingRegistry on the devnet, from https://docs.altmempool.wtf/guides/devnet/ (addresses can change if the devnet resets).
@@ -112,7 +112,6 @@ export function Agent() {
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-3 border-t border-border p-5">
-          <LinkButton href="/roadmap" variant="outline" size="sm">View roadmap</LinkButton>
           <a className="text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground" href="https://docs.altmempool.wtf/" target="_blank" rel="noreferrer">Alt-Mempool docs ↗</a>
           <a className="text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground" href="https://eips.ethereum.org/EIPS/eip-8141" target="_blank" rel="noreferrer">EIP-8141 ↗</a>
         </div>

@@ -1,12 +1,5 @@
-import type { Metadata } from "next";
-import { App } from "@/components/App";
+import { Overview } from "@/components/rq/console/Overview";
 
-export const metadata: Metadata = { title: "StealthRadar — App" };
-
-export default function Dashboard() {
-  return (
-    <div className="theme-app min-h-screen">
-      <App />
-    </div>
-  );
+export default function ConsoleHome() {
+  return <Overview />;
 }
