@@ -5,15 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Logo } from "./Logo";
 import { LinkButton } from "./ui";
 
-const LINKS = [
-  { href: "/#features", label: "Features" },
-  { href: "/models", label: "Models" },
-  { href: "/providers", label: "Providers" },
-  { href: "/stats", label: "Stats" },
-];
-
 export function SiteHeader() {
-  const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 24);
@@ -26,38 +18,13 @@ export function SiteHeader() {
       <div className={`mx-auto transition-all duration-500 ${scrolled ? "max-w-5xl rounded-full border border-neutral-800 bg-black/70 backdrop-blur-xl" : "max-w-none border-b border-transparent"}`}>
         <div className={`flex items-center justify-between px-6 transition-all duration-500 lg:px-8 ${scrolled ? "h-14" : "h-20"}`}>
           <Logo />
-          <nav className="hidden items-center gap-9 md:flex">
-            {LINKS.map((l) => (
-              <Link key={l.href} href={l.href} className="group relative text-sm font-medium text-neutral-400 transition-colors hover:text-white">
-                {l.label}
-                <span className="absolute -bottom-1 left-0 h-px w-0 bg-white transition-all duration-300 group-hover:w-full" />
-              </Link>
-            ))}
-          </nav>
           <div className="flex items-center gap-3">
-            <LinkButton href="/app" size="sm" className="hidden md:inline-flex">
+            <LinkButton href="/app" size="sm">
               Open the dashboard
             </LinkButton>
-            <button onClick={() => setOpen((o) => !o)} aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} className="p-2 text-white md:hidden">
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {open ? <path strokeLinecap="round" strokeWidth="1.8" d="M6 6l12 12M18 6L6 18" /> : <path strokeLinecap="round" strokeWidth="1.8" d="M4 7h16M4 12h16M4 17h16" />}
-              </svg>
-            </button>
           </div>
         </div>
       </div>
-      {open && (
-        <nav className="mx-3 mt-2 flex flex-col gap-1 rounded-2xl border border-neutral-800 bg-black p-3 md:hidden">
-          {LINKS.map((l) => (
-            <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 text-base font-medium text-neutral-200 hover:bg-neutral-900">
-              {l.label}
-            </Link>
-          ))}
-          <LinkButton href="/app" className="mt-2">
-            Open the dashboard
-          </LinkButton>
-        </nav>
-      )}
     </header>
   );
 }

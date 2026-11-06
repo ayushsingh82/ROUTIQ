@@ -1,11 +1,12 @@
 "use client";
 
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { WalletButton } from "../WalletButton";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, type ReactNode } from "react";
 import { useCatalog, useSessionKey } from "../hooks";
 import { Logo } from "../Logo";
+import { FaucetButton } from "./FaucetButton";
 import { useAnon } from "./useAnon";
 
 type IconName = "home" | "play" | "models" | "usage" | "nodes" | "privacy" | "vault" | "key";
@@ -67,7 +68,6 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
   const near = catalog?.providers.find((p) => p.id === "near-ai-cloud");
   const current = ALL.find((n) => (n.href === "/app" ? path === "/app" : path.startsWith(n.href))) ?? ALL[0];
   const privateReady = anon.status === "ready" && anon.kind === "network" && anon.mode === "private";
-  const initials = session.key ? session.key.slice(8, 10).toUpperCase() : "··";
 
   return (
     <KeyCtx.Provider value={session}>
@@ -83,7 +83,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
                 {g.items.map((n) => {
                   const on = n === current;
                   return (
-                    <Link key={n.href} href={n.href} className={`flex shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${on ? "bg-neutral-900 text-white" : "text-neutral-400 hover:bg-neutral-950 hover:text-white"}`}>
+                    <Link key={n.href} href={n.href} className={`flex shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${on ? "bg-neutral-900 text-white shadow-[inset_2px_0_0_#34d399]" : "text-neutral-400 hover:bg-neutral-950 hover:text-white"}`}>
                       <Icon n={n.icon} />
                       <span className="whitespace-nowrap">{n.label}</span>
                     </Link>
@@ -106,14 +106,18 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
 
         <div className="min-w-0 flex-1">
           <header className="flex h-14 items-center justify-between border-b border-neutral-900 px-6 md:px-8">
-            <h1 className="text-sm font-medium text-white">{current.label}</h1>
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-neutral-600">ROUTIQ</span>
+              <span className="text-neutral-700">/</span>
+              <h1 className="font-medium text-white">{current.label}</h1>
+              <span className="hidden items-center gap-1.5 rounded-full border border-neutral-800 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-neutral-400 sm:flex">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                Alt-Mempool devnet · 1337
+              </span>
+            </div>
             <div className="flex items-center gap-3">
-            <ConnectButton chainStatus="icon" showBalance={false} accountStatus="address" />
-            <Link href="/app/keys" className="flex items-center gap-2.5 rounded-full border border-neutral-800 py-1 pl-1 pr-3 text-sm text-neutral-300 transition hover:bg-neutral-950" title="Your session API key">
-              <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald-400 text-[11px] font-semibold text-black">{initials}</span>
-              <span className="hidden sm:inline">{!session.ready ? "starting…" : session.key ? `${session.key.slice(0, 12)}…` : "no key"}</span>
-              <span className="text-neutral-600">▾</span>
-            </Link>
+            <FaucetButton />
+            <WalletButton />
             </div>
           </header>
           <div className="px-6 py-10 md:px-8">

@@ -1,12 +1,15 @@
 "use client";
 
+import { WalletButton } from "../WalletButton";
 import Link from "next/link";
+import { useAccount } from "wagmi";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { anonStore } from "@/lib/anon-rpc/manager";
 import { getJson, useCatalog } from "../hooks";
 import { Badge, Card, CardHeader, LinkButton, Stat, compact, ms, usd } from "../ui";
 import { useConsoleKey } from "./ConsoleShell";
 import type { RoutingRow, UsageResponse } from "./types";
+import { FaucetButton } from "./FaucetButton";
 import { ActivityChart, FrameTxProof, PrivacyMeter, ProviderHealth, SpendByProvider } from "./Widgets";
 
 export function Overview() {
@@ -32,6 +35,7 @@ export function Overview() {
     return () => clearInterval(t);
   }, [load]);
 
+  const { address, isConnected } = useAccount();
   const near = catalog?.providers.find((p) => p.id === "near-ai-cloud");
   const up = catalog?.providers.filter((p) => p.status === "up").length ?? 0;
   const privateReady = anon.status === "ready" && anon.kind === "network" && anon.mode === "private";
@@ -44,8 +48,64 @@ export function Overview() {
     { label: "Agent vault + paymaster deployed", ok: true, detail: "Alt-Mempool devnet · policy enforced in VERIFY", href: "/app/agent" },
   ];
 
+  const done = checks.filter((c) => c.ok).length;
+  const next = checks.find((c) => c.ok === false);
+  const pct = Math.round((done / checks.length) * 100);
+
   return (
     <div className="space-y-8">
+      <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+        <Card>
+          <div className="p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-neutral-500">Readiness</p>
+                <h3 className="mt-1 text-lg font-semibold text-white">{done === checks.length ? "Everything is live" : `${done} of ${checks.length} checks passing`}</h3>
+              </div>
+              <span className="font-mono text-2xl text-emerald-400">{pct}%</span>
+            </div>
+            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-neutral-900">
+              <div className="h-full rounded-full bg-emerald-400 transition-all duration-700" style={{ width: `${pct}%` }} />
+            </div>
+            <p className="mt-3 text-xs text-neutral-500">
+              {next ? (
+                <>
+                  Next: <span className="text-neutral-300">{next.label}</span> — {next.detail}.{" "}
+                  {next.href && (
+                    <Link href={next.href} className="text-accent hover:underline">
+                      Fix it →
+                    </Link>
+                  )}
+                </>
+              ) : (
+                "Gateway, providers, private reads and the agent vault are all reporting healthy."
+              )}
+            </p>
+          </div>
+        </Card>
+        <Card>
+          <div className="space-y-3 p-5">
+            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-neutral-500">Wallet · devnet 1337</p>
+            {isConnected && address ? (
+              <>
+                <p className="break-all font-mono text-xs text-neutral-300">{address}</p>
+                <div className="flex items-center gap-3">
+                  <FaucetButton />
+                  <Link href="/app/nodes" className="text-xs text-accent hover:underline">
+                    Register a provider →
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-neutral-500">Connect a wallet to register providers and get free devnet ETH.</p>
+                <WalletButton />
+              </>
+            )}
+          </div>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Requests" value={usage?.summary.requests ?? "—"} />
         <Stat label="Tokens" value={usage ? compact(usage.summary.inputTokens + usage.summary.outputTokens) : "—"} />

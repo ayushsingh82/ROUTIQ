@@ -9,7 +9,7 @@ Privacy-aware AI inference and programmable payments for AI agents.
 An OpenAI-compatible router over many models, spending policies enforced by the account itself,
 and Ethereum reads that don't leak who is asking.
 
-<sub>Built for ETHGlobal Mumbai · Tracks: **Best Use of Anon-RPC** · **Best Use of Frame Transactions / Alternative Mempool**</sub>
+<sub>Built for ETHGlobal Mumbai · EF tracks: **Best Use of Anon-RPC** and **Best Use of the Frame Transaction Alternative Mempool** (the project builds on both; EF places a project in at most one prize)</sub>
 
 </div>
 
@@ -28,6 +28,7 @@ aggregators are single gatekeepers that see everything. ROUTIQ is the layer in b
 | **Router** | Cheapest / fastest / balanced provider selection, explained; same-model failover only when allowed | **Live** |
 | **Providers** | NEAR AI Cloud (57 chat models from 9 vendors, live prices), local Ollama, reference nodes, wallet-signed operator registration | **Live** |
 | **Privacy** | Browser Ethereum reads through a real [Anon-RPC](https://ethereum.github.io/anon-rpc/) network, fail-closed, honest counters | **Live** |
+| **Wallet** | RainbowKit connect in the dashboard; providers register by signing a manifest with their wallet | **Live** |
 | **Agent vault + ERC-20 paymaster** | Per-request cap, daily quota and provider allowlist enforced in Frame Transaction validation on the Alt-Mempool devnet | **Live on the devnet** — paid a registered provider on-chain; over-limit and unregistered payments rejected in VERIFY |
 
 > **Honesty rules we hold ourselves to:** no fake metrics, no fake transactions, no silent model swaps, no silent fallback from
@@ -43,13 +44,74 @@ aggregators are single gatekeepers that see everything. ROUTIQ is the layer in b
 
 ---
 
+## System at a glance
+
+```mermaid
+flowchart TB
+  subgraph users["Who uses it"]
+    DEV["Developer / AI agent<br/>OpenAI SDK + ROUTIQ key"]
+    OP["Provider operator<br/>wallet-signed registration"]
+    WEB["Dashboard user<br/>RainbowKit wallet"]
+  end
+
+  subgraph app["ROUTIQ · Next.js 16"]
+    API["/v1 gateway + router + usage meter"]
+    UI["Dashboard UI<br/>Playground · Models · Usage · Agent vault · Privacy"]
+    DEMO["/api/v1/agent/demo<br/>server-signed Frame Tx demo"]
+  end
+
+  subgraph offchain["Inference (offchain)"]
+    NEAR["NEAR AI Cloud"]
+    OLL["Ollama / reference nodes"]
+    OPN["Operator nodes"]
+  end
+
+  subgraph chain["Alt-Mempool devnet · chain 1337"]
+    VAULT["AgentBudgetVault<br/>VERIFY enforces the policy"]
+    PM["TokenPaymaster"]
+    REG["ProviderRegistry"]
+    STK["Staking registry"]
+  end
+
+  DEV --> API
+  OP --> UI
+  WEB --> UI
+  API --> NEAR & OLL & OPN
+  UI -->|"private reads<br/>Anon-RPC worker"| chain
+  UI --> DEMO
+  DEMO -->|"eth_sendFrameTransaction"| VAULT
+  VAULT -->|"reads (staked ⇒ allowed)"| REG
+  VAULT --- PM
+  STK -. "stake unlocks external storage reads" .-> VAULT
+```
+
+### What each trust boundary can see
+
+```mermaid
+flowchart LR
+  subgraph you["You"]
+    P["Prompt"]
+    IP["Your IP"]
+    W["Your wallet address"]
+  end
+  P -->|"visible"| GW["ROUTIQ gateway"] -->|"visible"| PR["Inference provider"]
+  IP -->|"hidden by Anon-RPC<br/>(chain reads only)"| EXIT["Anon-RPC exit node"] --> RPC["Devnet RPC"]
+  W -->|"public by design"| CH["Onchain registry / vault"]
+  classDef vis fill:#3b1d1d,stroke:#f87171,color:#fff
+  classDef hid fill:#052e1c,stroke:#34d399,color:#fff
+  class GW,PR,CH vis
+  class EXIT hid
+```
+
+---
+
 ## Architecture
 
 ```mermaid
 flowchart LR
   subgraph Clients
     A["AI agent / app<br/>(OpenAI SDK)"]
-    B["Browser console"]
+    B["Browser dashboard<br/>RainbowKit wallet"]
   end
 
   subgraph ROUTIQ["ROUTIQ gateway · Next.js route handlers"]
@@ -163,8 +225,13 @@ sequenceDiagram
   D-->>UI: result (the RPC sees the exit node, not the user's IP)
 ```
 
-What we measured (headless Chrome, real Nox network, public devnet): **block 1478 read through Nox in 3.7 s · 2 anonymised reads · 0 direct reads · 2 counted bootstrap reads**,
-staking registry confirmed deployed (1259 bytes) and the sidecar answering. Reproduce with `npm run check:anon`.
+What we measured (headless Chrome, real Nox network, public devnet, latest run): **block 2548 read through Nox · 2 anonymised reads · 0 direct reads · 2 counted bootstrap reads**,
+staking registry (1259 bytes), `AgentBudgetVault` (4908 bytes) and `TokenPaymaster` (2885 bytes) confirmed deployed through the network, and the sidecar answering. Reproduce with `npm run check:anon`.
+
+**Anon-RPC by default, with stated exclusions.** Every browser chain read goes through `src/lib/rpc/client.ts` → the Anon-RPC worker; it is fail-closed and counts anonymised / direct / bootstrap reads. Intentionally *not* routed through Anon-RPC:
+(1) the one-time bootstrap read of the worker-specifier contract (counted separately, as the harness requires);
+(2) RPC calls a connected wallet (MetaMask etc.) makes on its own;
+(3) server-side calls (the devnet faucet proxy and the agent demo's transaction submission), because Anon-RPC is a browser technology and cannot anonymise servers.
 
 **Anon-RPC does not:** hide prompts · anonymise server-side calls · anonymise transaction submission · make chain data private.
 The Privacy Center has a side-by-side "what does the RPC provider see?" test (direct vs. through the network).
@@ -215,7 +282,7 @@ flowchart LR
 
 Both the vault and the paymaster are **staked** in the Alt-Mempool staking registry, which is what lets their VERIFY logic read other contracts' storage.
 
-What the demo (`npm run agent:spend`) proved:
+What the demo (`npm run agent:spend`) proved (re-run on 2026-11-06, all three outcomes as expected):
 
 - a vault payment of 0.25 mUSDC to a registered provider with the paymaster sponsoring gas reached **`OnChain`** (`0x69866dacab3537a3442679965169c5f83047bc41044d189ecfcf68a69febc911`);
 - a payment over the per-request cap was **rejected at validation** with `over per-request cap`;
@@ -226,6 +293,87 @@ Reproduce: `forge build && npm run deploy:devnet && npm run stake:devnet && npm 
 
 ---
 
+## Dashboard flows
+
+### Wallet connect and provider registration
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as Operator
+  participant RK as RainbowKit (wagmi)
+  participant UI as Providers page
+  participant S as /api/v1/providers/register
+  participant H as Health prober
+
+  U->>RK: Connect wallet (MetaMask · Rabby · Rainbow · WalletConnect)
+  UI->>UI: build manifest + canonical sha256 message
+  UI->>RK: signMessage (EIP-191)
+  RK-->>UI: signature
+  UI->>S: manifest + signature
+  S->>S: recover signer == walletAddress · fresh timestamp · SSRF guard
+  S->>H: probe endpoint /models, confirm declared models are served
+  H-->>S: ok
+  S-->>UI: registered (manifest hash), listed in the marketplace
+```
+
+### Agent vault demo (Agent page)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Agent page
+  participant API as /api/v1/agent/demo
+  participant SC as Alt-Mempool sidecar
+  participant V as AgentBudgetVault
+  participant R as ProviderRegistry
+
+  UI->>API: POST {kind: pay | over-cap | unregistered}
+  API->>API: build frames, sign with the throwaway devnet agent key
+  API->>SC: ethrex_simulateFrameTransaction + eth_sendFrameTransaction
+  SC->>V: VERIFY frame (static)
+  V->>R: is the payee an active provider?
+  alt within policy
+    V-->>SC: APPROVE
+    SC-->>API: OnChain, tx hash
+  else over per-request cap / provider not registered
+    V-->>SC: revert Policy(reason)
+    SC-->>API: rejected at validation
+  end
+  API-->>UI: status, hash, reason, honest note
+```
+
+### Contracts
+
+```mermaid
+classDiagram
+  class AgentBudgetVault {
+    +owner
+    +perRequestCap
+    +dailyQuota
+    +pay(provider, amount)
+    +payFee(to, amount)
+    +setPolicy(cap, quota)
+    +remainingToday()
+  }
+  class TokenPaymaster {
+    +sponsors gas
+    +repaid in ERC-20 same tx
+  }
+  class ProviderRegistry {
+    +register(payTo, manifestHash, endpoint)
+    +setActive(payTo, active)
+    +isActive(payTo)
+  }
+  class MockUSDC
+  AgentBudgetVault --> ProviderRegistry : VERIFY reads
+  AgentBudgetVault --> MockUSDC : pays
+  TokenPaymaster --> MockUSDC : fee in
+  AgentBudgetVault ..> TokenPaymaster : gas sponsor
+```
+
+---
+
 ## Quick start
 
 Requirements: Node 20+ (tested on 24), npm. Optional: [Ollama](https://ollama.com) for a free local model.
@@ -233,7 +381,7 @@ Requirements: Node 20+ (tested on 24), npm. Optional: [Ollama](https://ollama.co
 ```bash
 npm install
 cp .env.example .env.local          # then put your keys in .env.local (never commit it)
-npm run dev                          # http://localhost:3100  (use: npx next dev -p 3100)
+npm run dev                          # http://localhost:3100
 ```
 
 Optional providers for a richer demo:
@@ -243,6 +391,10 @@ ollama pull smollm2:135m             # a tiny real local model (~270 MB)
 npm run provider:alpha               # reference node on :4101 → Ollama
 npm run provider:beta                # reference node on :4102 → Ollama
 ```
+
+Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` (free at [cloud.reown.com](https://cloud.reown.com)) to enable QR-code wallets in the connect button; browser-extension wallets work without it.
+
+Connected wallets can press **Get devnet ETH** in the header for free chain-1337 ETH.
 
 Set `NEAR_AI_API_KEY` in `.env.local` to activate [NEAR AI Cloud](https://cloud-api.near.ai/docs) (57 chat models; prices come from its live catalogue).
 Without a key it is listed as **not configured** and never as "up".
@@ -276,6 +428,8 @@ Create a key in the dashboard (**API keys**) or `POST /api/v1/developer/keys`. R
 | `GET /api/v1/routing/history` | key | Past routing decisions |
 | `GET/POST/DELETE /api/v1/developer/keys` | admin token (optional) | Create / list / revoke keys |
 | `POST /api/v1/providers/register`, `PATCH /api/v1/providers/:id` | wallet signature | Operator registration (EIP-191) |
+| `POST /api/v1/faucet` | none | Proxies the devnet faucet: 1 ETH per address per hour (`skandha_explorer_faucet` on the gateway) |
+| `GET/POST /api/v1/agent/demo` | none | Live Frame Tx demo on the devnet (throwaway agent key, server-signed) |
 | `GET /api/v1/public/catalog`, `/public/stats`, `/providers` | none | Marketplace, aggregate stats |
 
 ---
@@ -295,7 +449,7 @@ Create a key in the dashboard (**API keys**) or `POST /api/v1/developer/keys`. R
 
 ```bash
 npm run typecheck && npm run lint
-npm test                 # 20 unit tests: router, SSRF guard, signed manifests (browser/server parity), echo parser
+npm test                 # 22 unit tests: router, SSRF guard, signed manifests (browser/server parity), echo parser
 npm run build && npx next start -p 3101
 npm run smoke            # real-browser run of the whole UI incl. a live streamed completion (needs Ollama)
 npm run check:anon       # real Nox network → devnet reads, fail-closed check, counters
@@ -310,9 +464,10 @@ hashed keys, revocation and rate limits · streaming with metering · Anon-RPC r
 ## Project layout
 
 ```
-src/app/                     Next.js App Router: landing, /models /providers /stats, /app (dashboard), /api/v1
+src/app/                     Next.js App Router: landing, /models /providers /stats, /app (dashboard), /api/v1 (incl. agent demo)
 src/lib/routiq/              router, pricing, SSRF guard, provider discovery, keys, usage, signed manifests (+ tests)
 src/lib/anon-rpc/            Anon-RPC worker manager, network registry, honest counters
+src/lib/wallet/                RainbowKit / wagmi config (devnet chain 1337)
 src/lib/rpc/client.ts        the only JSON-RPC client (central, chain-guarded, fail-closed)
 src/components/rq/           design system, site shell, landing, dashboard pages
 scripts/                     reference provider node, browser tests, Anon-RPC / registration checks

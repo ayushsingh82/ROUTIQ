@@ -1,6 +1,6 @@
 "use client";
 
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { WalletButton } from "../WalletButton";
 import { useState } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import { getJson, useCatalog } from "../hooks";
@@ -75,7 +75,7 @@ export function Nodes() {
       </Card>
 
       <Card>
-        <CardHeader title="Register a provider" sub="Sign a manifest with your wallet. We verify the signature, the endpoint's safety, and that it really serves the models." right={<ConnectButton chainStatus="none" showBalance={false} />} />
+        <CardHeader title="Register a provider" sub="Sign a manifest with your wallet. We verify the signature, the endpoint's safety, and that it really serves the models." right={<WalletButton />} />
         <div className="grid gap-4 p-5 md:grid-cols-2">
           <label className="block text-xs">
             <span className="mb-1.5 block text-[10px] uppercase tracking-wider text-muted-foreground">Provider ID</span>
