@@ -1,24 +1,32 @@
 // The ONLY place the app performs JSON-RPC. Audit point: grep for `fetch(` elsewhere — there must be none
 // outside lib/anon-rpc/manager.ts.
 
-import { createPublicClient, custom, type PublicClient } from "viem";
-import { sepolia } from "viem/chains";
+import { createPublicClient, custom, defineChain, type PublicClient } from "viem";
 import { anonFetch } from "../anon-rpc/manager.ts";
-import { TARGET_CHAINS } from "../anon-rpc/networks.ts";
+import { TARGET_CHAIN } from "../anon-rpc/networks.ts";
+
+export const devnet = defineChain({
+  id: TARGET_CHAIN.id,
+  name: TARGET_CHAIN.name,
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: { default: { http: [TARGET_CHAIN.rpc] } },
+});
 
 let rpcId = 0;
 
-/** The demo runs on Ethereum Sepolia only. */
-export const EXPECTED_CHAIN_ID = TARGET_CHAINS.sepolia.id;
+/** ROUTIQ reads the Alt-Mempool devnet only. */
+export const EXPECTED_CHAIN_ID = TARGET_CHAIN.id;
 let chainCheck: Promise<void> | null = null;
 
 interface Opts {
   isolationKey?: string;
   signal?: AbortSignal;
+  /** Override the destination URL (e.g. the sidecar /rpc). Defaults to the devnet execution RPC. */
+  endpoint?: string;
 }
 
 async function post<T>(method: string, params: unknown[], opts: Opts): Promise<T> {
-  const res = await anonFetch(TARGET_CHAINS.sepolia.rpc, {
+  const res = await anonFetch(opts.endpoint ?? TARGET_CHAIN.rpc, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: ++rpcId, method, params }),
@@ -31,13 +39,13 @@ async function post<T>(method: string, params: unknown[], opts: Opts): Promise<T
   return j.result as T;
 }
 
-/** Refuse to read from any chain other than Sepolia (checked once per page session, through the same private path). */
-function ensureSepolia(opts: Opts): Promise<void> {
+/** Refuse to read from any chain other than the target devnet (checked once per page session, through the same private path). */
+function ensureChain(opts: Opts): Promise<void> {
   chainCheck ??= post<string>("eth_chainId", [], opts)
     .then((hex) => {
       const id = Number(BigInt(hex));
       if (id !== EXPECTED_CHAIN_ID) {
-        throw new Error(`Wrong network: RPC reports chain ${id}, expected Ethereum Sepolia (${EXPECTED_CHAIN_ID}).`);
+        throw new Error(`Wrong network: RPC reports chain ${id}, expected ${TARGET_CHAIN.name} (${EXPECTED_CHAIN_ID}).`);
       }
     })
     .catch((e) => {
@@ -48,14 +56,14 @@ function ensureSepolia(opts: Opts): Promise<void> {
 }
 
 export async function rpcRequest<T = unknown>(method: string, params: unknown[] = [], opts: Opts = {}): Promise<T> {
-  if (method !== "eth_chainId") await ensureSepolia(opts);
+  if (method !== "eth_chainId") await ensureChain(opts);
   return post<T>(method, params, opts);
 }
 
 /** viem client whose transport is the central Anon-RPC path (no other network access). */
 export function getPublicClient(isolationKey?: string): PublicClient {
   return createPublicClient({
-    chain: sepolia,
+    chain: devnet,
     transport: custom({
       request: ({ method, params }: { method: string; params?: unknown }) =>
         rpcRequest(method, (params as unknown[]) ?? [], { isolationKey }),

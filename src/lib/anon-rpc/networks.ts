@@ -57,14 +57,16 @@ export const BOOTSTRAP_RPC: Record<number, string> = {
   11155111: "https://ethereum-sepolia-rpc.publicnode.com",
 };
 
-/** Destination RPC the anonymizing network's exit node calls on our behalf. */
-export const TARGET_CHAINS = {
-  sepolia: {
-    id: 11155111,
-    name: "Sepolia",
-    // NEXT_PUBLIC_RPC_OVERRIDE is a BUILD-time knob used only by the local browser E2E (anvil fork).
-    rpc: process.env.NEXT_PUBLIC_RPC_OVERRIDE || "https://ethereum-sepolia-rpc.publicnode.com",
-  },
+/**
+ * The chain ROUTIQ reads from: the Alternative Mempool devnet (chain 1337). The Anon-RPC exit node fetches this
+ * RPC on the user's behalf. Public throwaway devnet; may be reset at any time.
+ */
+export const TARGET_CHAIN = {
+  id: Number(process.env.NEXT_PUBLIC_ROUTIQ_CHAIN_ID ?? 1337),
+  name: "Alt-Mempool devnet",
+  rpc: process.env.NEXT_PUBLIC_ROUTIQ_RPC_URL ?? "https://altmempool.forshtat.com",
+  sidecarRpc: process.env.NEXT_PUBLIC_ROUTIQ_SIDECAR_RPC_URL ?? "https://altmempool.forshtat.com/rpc",
+  explorer: "https://explorer.altmempool.wtf/",
 } as const;
 
 export function getNetwork(id: string): AnonNetwork {

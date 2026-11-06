@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@anon-rpc/browser-harness": "^0.4.0",
+    "@forshtat/hegota-support": "^0.0.1",
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
     "@tanstack/react-query": "^5.106.1",
@@ -40,6 +41,6 @@
     "tailwindcss": "^4",
     "typescript": "^5"
   },
-  "description": "ROUTIQ \u2014 privacy-aware AI inference router and agent payment layer (OpenAI-compatible API, Anon-RPC reads, Alt-Mempool devnet)",
+  "description": "ROUTIQ — privacy-aware AI inference router and agent payment layer (OpenAI-compatible API, Anon-RPC reads, Alt-Mempool devnet)",
   "license": "MIT"
 }
