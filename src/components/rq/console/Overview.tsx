@@ -41,7 +41,7 @@ export function Overview() {
     { label: "At least one provider up", ok: catalog ? up > 0 : null, detail: catalog ? `${up} up` : "checking…", href: "/app/nodes" },
     { label: "NEAR AI Cloud configured", ok: near ? near.configured : null, detail: near ? (near.configured ? `${near.modelCount} models available` : "set NEAR_AI_API_KEY in .env.local and restart") : "checking…", href: "/app/nodes" },
     { label: "Anon-RPC worker ready", ok: privateReady, detail: privateReady ? `${anon.networkId} · ${anon.anonRequests} anonymised reads` : "start a network in the Privacy Center", href: "/app/privacy" },
-    { label: "Agent vault deployed", ok: false, detail: "devnet work in progress", href: "/app/agent" },
+    { label: "Agent vault + paymaster deployed", ok: true, detail: "Alt-Mempool devnet · policy enforced in VERIFY", href: "/app/agent" },
   ];
 
   return (

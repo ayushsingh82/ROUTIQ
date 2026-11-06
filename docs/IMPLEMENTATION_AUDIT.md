@@ -16,6 +16,7 @@ the Anon-RPC layer and the central RPC client were kept and retargeted from Sepo
 | Same-model failover | provider returning 503 → served by another provider, flagged in headers; fallback disabled → clean 502 |
 | Keys, rate limits, usage ledger | hashed keys (no plaintext at rest), revocation (401 afterwards), per-key usage ranges |
 | Provider registration | EIP-191 signature, replay window, SSRF rejections (loopback, private, metadata, bad DNS), endpoint must serve declared models; browser/server hashing parity test |
+| Agent vault + ERC-20 paymaster | deployed on the devnet; sponsored payment to a registered provider reached OnChain; over-cap and unregistered payments rejected in VERIFY (`npm run agent:spend`) |
 | Anon-RPC | real Nox network reading the devnet in headless Chrome; fail-closed before start; counters 2 / 0 / 2 (anonymised / direct / bootstrap) |
 | UI | real-browser smoke test across landing, console, playground, usage, models, providers, keys, agent page; no console errors |
 
@@ -23,8 +24,7 @@ the Anon-RPC layer and the central RPC client were kept and retargeted from Sepo
 
 | Item | Why |
 |---|---|
-| Frame Transactions, vault, ERC-20 paymaster | frame introspection opcodes unverified on the devnet; support-library install needs explicit approval; see `DEVNET_RESEARCH.md` |
-| Onchain `ProviderRegistry` | not yet deployed (depends on the above tooling for the staked-account story) |
+| Gateway ↔ registry sync | the onchain registry is deployed and read by the vault; the gateway still uses its offchain signed-manifest registry |
 | Onchain settlement | usage is metered offchain only (labelled) |
 | Wallet-based API-key auth | key management is open on localhost; `ROUTIQ_ADMIN_TOKEN` protects it on a public deployment |
 

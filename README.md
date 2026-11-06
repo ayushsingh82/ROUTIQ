@@ -28,7 +28,7 @@ aggregators are single gatekeepers that see everything. ROUTIQ is the layer in b
 | **Router** | Cheapest / fastest / balanced provider selection, explained; same-model failover only when allowed | **Live** |
 | **Providers** | NEAR AI Cloud (57 chat models from 9 vendors, live prices), local Ollama, reference nodes, wallet-signed operator registration | **Live** |
 | **Privacy** | Browser Ethereum reads through a real [Anon-RPC](https://ethereum.github.io/anon-rpc/) network, fail-closed, honest counters | **Live** |
-| **Agent vault + ERC-20 paymaster** | Per-request cap, daily quota and provider allowlist enforced in Frame Transaction validation on the Alt-Mempool devnet | **In progress** (nothing is simulated; see [Roadmap](#roadmap)) |
+| **Agent vault + ERC-20 paymaster** | Per-request cap, daily quota and provider allowlist enforced in Frame Transaction validation on the Alt-Mempool devnet | **Live on the devnet** — paid a registered provider on-chain; over-limit and unregistered payments rejected in VERIFY |
 
 > **Honesty rules we hold ourselves to:** no fake metrics, no fake transactions, no silent model swaps, no silent fallback from
 > Anon-RPC to a direct RPC, and offchain usage accounting is never presented as an onchain payment. Unfinished work is labelled
@@ -89,7 +89,7 @@ flowchart TB
     I1["Agent request"] --> I2["Gateway · router"] --> I3["Provider"]
   end
   subgraph settlement["Settlement & privacy plane · browser"]
-    S1["Console / agent UI"] --> S2["Anon-RPC worker<br/>sandboxed, hash-pinned"] --> S3["Anonymising network<br/>Nox · tor-js · Nym"] --> S4["Alt-Mempool devnet RPC<br/>chain 1337"]
+    S1["Dashboard / agent UI"] --> S2["Anon-RPC worker<br/>sandboxed, hash-pinned"] --> S3["Anonymising network<br/>Nox · tor-js · Nym"] --> S4["Alt-Mempool devnet RPC<br/>chain 1337"]
   end
   inference -. "prompts are visible to the gateway and the provider" .- settlement
 ```
@@ -147,7 +147,7 @@ flowchart TD
 ```mermaid
 sequenceDiagram
   autonumber
-  participant UI as Console (browser)
+  participant UI as Dashboard (browser)
   participant B as Bootstrap RPC
   participant W as Anon-RPC worker<br/>(sandboxed iframe)
   participant N as Anonymising network<br/>(Nox)
@@ -204,9 +204,25 @@ flowchart LR
   F --> G["status: OnChain / Reverted<br/>eth_getFrameTransactionReceipt"]
 ```
 
-**Status:** the devnet is reachable (read through Anon-RPC), the staking registry and the sidecar are verified live, and the design above is documented
-against the real rules. The vault/paymaster contracts and the first real Frame Transaction are **in progress**, blocked on verifying that
-`FRAMEPARAM` / `FRAMEDATACOPY` work inside VERIFY frames on this devnet and on tooling approval. Until they are on chain, the UI says "not deployed".
+**Status — deployed and verified on the devnet (chain 1337):**
+
+| Contract | Address | Role |
+|---|---|---|
+| `AgentBudgetVault` | `0x4c860e1dabe1e6965866aa2601e9a3b99688a5ea` | agent account; VERIFY frame enforces owner signature, provider registry, per-request cap, daily quota |
+| `TokenPaymaster` | `0x49c83d87debce75a68b88220e8ca0d9a5f83288b` | sponsors gas, repaid in the ERC-20 inside the same transaction |
+| `ProviderRegistry` | `0xacc2eacc85e27beff730812c003da1a7d9fa63bf` | onchain provider identity + manifest hash |
+| `MockUSDC` | `0x89bda3a35f878382e184c67b535f844cdcc01427` | devnet-only test token |
+
+Both the vault and the paymaster are **staked** in the Alt-Mempool staking registry, which is what lets their VERIFY logic read other contracts' storage.
+
+What the demo (`npm run agent:spend`) proved:
+
+- a vault payment of 0.25 mUSDC to a registered provider with the paymaster sponsoring gas reached **`OnChain`** (`0x69866dacab3537a3442679965169c5f83047bc41044d189ecfcf68a69febc911`);
+- a payment over the per-request cap was **rejected at validation** with `over per-request cap`;
+- a payment to an unregistered address was **rejected at validation** with `provider not registered`;
+- before staking, the same transaction was rejected by the mempool with `unstaked sender accessed <registry> slot …` — the exact rule the Alternative Mempool relaxes for staked entities.
+
+Reproduce: `forge build && npm run deploy:devnet && npm run stake:devnet && npm run agent:spend`. The devnet can be reset at any time; every step is scripted.
 
 ---
 
@@ -245,7 +261,7 @@ const client = new OpenAI({ apiKey: process.env.ROUTIQ_API_KEY, baseURL: "http:/
 const r = await client.chat.completions.create({ model: "Qwen/Qwen3.8-27B", messages: [{ role: "user", content: "Hello" }] });
 ```
 
-Create a key in the console (**API keys**) or `POST /api/v1/developer/keys`. Routing hints go in an optional `routiq` field
+Create a key in the dashboard (**API keys**) or `POST /api/v1/developer/keys`. Routing hints go in an optional `routiq` field
 (`mode: "cheapest" | "fastest" | "balanced"`, `provider`, `fallback`). Every response carries `x-routiq-provider`, `x-routiq-cost-usd`,
 `x-routiq-latency-ms`, `x-routiq-request-id`; streams end with an SSE comment `: routiq {...}` that SDKs ignore.
 
@@ -294,12 +310,14 @@ hashed keys, revocation and rate limits · streaming with metering · Anon-RPC r
 ## Project layout
 
 ```
-src/app/                     Next.js App Router: landing, /models /providers /stats, /app (console), /api/v1
+src/app/                     Next.js App Router: landing, /models /providers /stats, /app (dashboard), /api/v1
 src/lib/routiq/              router, pricing, SSRF guard, provider discovery, keys, usage, signed manifests (+ tests)
 src/lib/anon-rpc/            Anon-RPC worker manager, network registry, honest counters
 src/lib/rpc/client.ts        the only JSON-RPC client (central, chain-guarded, fail-closed)
-src/components/rq/           design system, site shell, landing, console pages
+src/components/rq/           design system, site shell, landing, dashboard pages
 scripts/                     reference provider node, browser tests, Anon-RPC / registration checks
+contracts/src/                Solidity: AgentBudgetVault, TokenPaymaster, ProviderRegistry, MockUSDC
+deployments/devnet.json      deployed addresses and proof transaction
 docs/routiq/                 briefs, verified findings, implementation plan, pitch
 docs/DEVNET_RESEARCH.md      verified Alt-Mempool devnet configuration
 docs/IMPLEMENTATION_AUDIT.md what exists, what works, what is blocked

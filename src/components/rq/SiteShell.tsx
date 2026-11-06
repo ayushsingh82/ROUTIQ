@@ -36,7 +36,7 @@ export function SiteHeader() {
           </nav>
           <div className="flex items-center gap-3">
             <LinkButton href="/app" size="sm" className="hidden md:inline-flex">
-              Open the console
+              Open the dashboard
             </LinkButton>
             <button onClick={() => setOpen((o) => !o)} aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} className="p-2 text-white md:hidden">
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,7 +54,7 @@ export function SiteHeader() {
             </Link>
           ))}
           <LinkButton href="/app" className="mt-2">
-            Open the console
+            Open the dashboard
           </LinkButton>
         </nav>
       )}
@@ -64,7 +64,7 @@ export function SiteHeader() {
 
 const COLS: { title: string; links: [string, string, boolean?][] }[] = [
   { title: "Explore", links: [["Models", "/models"], ["Providers", "/providers"], ["Network stats", "/stats"]] },
-  { title: "Developers", links: [["Console", "/app"], ["Playground", "/app/playground"], ["API keys", "/app/keys"], ["Privacy Center", "/app/privacy"]] },
+  { title: "Developers", links: [["Dashboard", "/app"], ["Playground", "/app/playground"], ["API keys", "/app/keys"], ["Privacy Center", "/app/privacy"]] },
   { title: "Built on", links: [["Anon-RPC", "https://ethereum.github.io/anon-rpc/", true], ["EIP-8141", "https://eips.ethereum.org/EIPS/eip-8141", true], ["Alternative Mempools", "https://docs.altmempool.wtf/", true], ["NEAR AI Cloud", "https://cloud-api.near.ai/docs", true]] },
 ];
 

@@ -47,7 +47,7 @@ export function ProvidersView() {
       <Card className="p-6">
         <h3 className="text-sm font-semibold uppercase tracking-wider">Run a provider</h3>
         <p className="mt-3 max-w-3xl text-xs leading-relaxed text-muted-foreground">
-          Any operator with a public HTTPS, OpenAI-compatible endpoint can register by signing a manifest with their wallet. ROUTIQ verifies the signature, checks the endpoint is public (no localhost, private ranges or cloud-metadata targets), and confirms the endpoint really serves the declared models before listing it. The reference node in <code className="text-foreground">scripts/provider-node.mts</code> is a starting point. Registration lives in the console under <span className="text-foreground">Providers</span>.
+          Any operator with a public HTTPS, OpenAI-compatible endpoint can register by signing a manifest with their wallet. ROUTIQ verifies the signature, checks the endpoint is public (no localhost, private ranges or cloud-metadata targets), and confirms the endpoint really serves the declared models before listing it. The reference node in <code className="text-foreground">scripts/provider-node.mts</code> is a starting point. Registration lives in the dashboard under <span className="text-foreground">Providers</span>.
         </p>
       </Card>
     </div>

@@ -23,7 +23,7 @@ export function Hero() {
         </p>
         <div className="rq-in mt-10 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row" style={{ animationDelay: "0.15s" }}>
           <LinkButton href="/app" className="w-full sm:w-auto">
-            Open the console
+            Open the dashboard
           </LinkButton>
           <LinkButton href="#how-it-works" variant="outline" className="w-full sm:w-auto">
             See how it works

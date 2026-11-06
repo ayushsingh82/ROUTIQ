@@ -32,8 +32,8 @@ Repository root = the Next.js app; all markdown in `docs/`. StealthRadar is pres
 | 2 | Routing features | health probes, quotes/preview, fallback, usage ledger, API keys | **done** |
 | 3 | Frontend pivot | ROUTIQ landing + console in the Confide visual language | **done** |
 | 4 | Anon-RPC on the devnet | retarget transport to 1337; read the devnet in-browser through Nox; Privacy Center counters | **done** (registry read pending the contract) |
-| 5 | ProviderRegistry | contract + deploy script (legacy tx, faucet-funded key) + seed with the live providers | next |
-| 6 | Frame Tx payments | probe opcodes → `InferenceAccount` → stake → submit via Alt Mempool → rejected over-limit tx | **blocked on approval to install `@forshtat/hegota-support`** |
+| 5 | ProviderRegistry | contract + deploy script (legacy tx, faucet-funded key) + seed with the live providers | **done** (deployed on the devnet) |
+| 6 | Frame Tx payments | probe opcodes → `InferenceAccount` → stake → submit via Alt Mempool → rejected over-limit tx | **done** — vault + paymaster staked; paid tx OnChain; over-cap and unregistered rejected |
 | 7 | Integration | selection → authorisation → settlement; wallet/payments page; end-to-end test | after 4–6 |
 
 ## 3. Honest scope rules

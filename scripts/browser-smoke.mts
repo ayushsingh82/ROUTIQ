@@ -36,8 +36,8 @@ await step("landing: Confide-style hero, serif accent, pill CTA, live numbers", 
   await until("No single gatekeeper");
   eq(await p.eval<string>("getComputedStyle(document.body).backgroundColor"), "rgb(0, 0, 0)", "background is pure black");
   eq(await p.eval<boolean>("!!document.querySelector('h1 span.font-serif.italic')"), true, "serif italic accent word");
-  eq(await p.eval<string>("[...document.querySelectorAll('a')].find(a=>a.textContent.includes('Open the console')).getAttribute('href')"), "/app", "CTA link");
-  const radius = parseFloat(await p.eval<string>("getComputedStyle([...document.querySelectorAll('a')].find(a=>a.textContent.includes('Open the console'))).borderRadius"));
+  eq(await p.eval<string>("[...document.querySelectorAll('a')].find(a=>a.textContent.includes('Open the dashboard')).getAttribute('href')"), "/app", "CTA link");
+  const radius = parseFloat(await p.eval<string>("getComputedStyle([...document.querySelectorAll('a')].find(a=>a.textContent.includes('Open the dashboard'))).borderRadius"));
   if (!(radius >= 9999)) throw new Error(`CTA is not a pill (border-radius ${radius})`);
   await p.waitFor("(()=>{const n=[...document.querySelectorAll('p')].find(d=>d.textContent==='Models served right now'); return n && /^\\d+$/.test(n.previousElementSibling.textContent)})()", 30000, "live model count");
   if (SHOTS) await p.screenshot(`${SHOTS}/landing.png`);
@@ -52,7 +52,7 @@ await step("tab: title and ROUTIQ favicon", async () => {
   if (!svg.includes("#34d399")) throw new Error("icon.svg is not the ROUTIQ mark");
 });
 
-await step("console: sidebar, workspace labels, session key issued", async () => {
+await step("dashboard: sidebar, workspace labels, session key issued", async () => {
   await p.goto(BASE + "/app");
   await hydrated();
   for (const l of ["My workspace", "Playground", "Browse models", "Usage", "Providers", "Privacy Center", "Agent vault", "API keys"]) if (!(await has(p, l))) throw new Error(`missing sidebar item: ${l}`);
@@ -119,11 +119,11 @@ await step("api keys: create (shown once), then revoke", async () => {
   console.log(`      created and revoked a key (${before} revocable keys before)`);
 });
 
-await step("agent vault page is honest: not deployed, no dead buttons", async () => {
+await step("agent vault page shows the deployed contracts and has no dead buttons", async () => {
   await p.goto(BASE + "/app/agent");
   await hydrated();
-  await until("in progress");
-  await until("not deployed");
+  await until("deployed on the Alt-Mempool devnet");
+  await until("Spending policy");
   const dead = await p.eval<number>("[...document.querySelectorAll('button')].filter(b=>b.disabled && !/Run devnet check/.test(b.textContent)).length");
   eq(dead, 0, "disabled buttons other than the gated devnet check");
 });

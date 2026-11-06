@@ -49,10 +49,11 @@ Storage rules (docs, `STORAGE-0xx`): a sender may always read/write its **own** 
 | Opcode | Status |
 |---|---|
 | `APPROVE`, `SIGPARAM` | verified on the devnet by the support library's authors |
-| `TXPARAM`, `FRAMEPARAM`, `FRAMEDATALOAD`, `FRAMEDATACOPY`, `SIGDATACOPY` | **UNVERIFIED** — from the EIP text; may differ from the client |
+| `TXPARAM` (CURRENT_FRAME_INDEX, FRAME_COUNT, SENDER, MAX_COST), `FRAMEPARAM` (MODE, RESOLVED_TARGET, VALUE, DATA_LENGTH), `FRAMEDATACOPY`, `SIGPARAM`, `APPROVE` | **verified live (2026-11-06)** — used by the deployed vault and paymaster VERIFY frames; policy reverts surface with decoded reasons |
+| `FRAMEDATALOAD`, `SIGDATACOPY` | UNVERIFIED — not used |
 | `pre_verify` frames | described by ERC-8421; whether this devnet build admits them is **UNVERIFIED** |
 
-The planned policy check reads the SENDER frame's calldata/value inside the VERIFY frame, so it depends on `FRAMEPARAM`/`FRAMEDATACOPY`. **This must be probed first.** Fallbacks: enforce the cap in the SENDER frame (revert on violation) and keep only the registry check in VERIFY; or use a `pre_verify` frame for the quota write.
+The policy check reads the SENDER frame's calldata/value inside the VERIFY frame, so it depends on `FRAMEPARAM`/`FRAMEDATACOPY`. **Probed and working.** (Fallbacks, unused:: enforce the cap in the SENDER frame (revert on violation) and keep only the registry check in VERIFY; or use a `pre_verify` frame for the quota write.
 
 ## Anon-RPC → devnet (verified in a real browser)
 
@@ -61,3 +62,12 @@ Starting the Nox network from the Privacy Center and reading the devnet through 
 ## Open items
 
 1. Probe `FRAMEPARAM`/`FRAMEDATACOPY`/`TXPARAM` and `pre_verify` on the live devnet. 2. First real Frame Transaction (EOA self-relay, then a contract account). 3. Deploy `ProviderRegistry`, vault and paymaster; stake the account. 4. The devnet can be reset at any time: every deployment must be re-runnable from a script.
+
+## Findings from building the vault (2026-11-06)
+
+- `TIMESTAMP` is a banned opcode in validation (`sender uses banned opcode: TIMESTAMP`), so the daily quota cannot roll by clock inside VERIFY. VERIFY checks the stored counter conservatively and a `newDay()` SENDER frame rolls it.
+- An unstaked sender reading another contract's storage is rejected: `unstaked sender accessed <contract> slot <slot>`. Staking fixes it. The registry keys stake off `msg.sender`, so a contract has to call `addStake(uint32)` itself (vault: SENDER frame `stakeSelf`; paymaster: owner-called `stake`). The staking call is `addStake(uint32)` with value > minStake (0.01 ETH).
+- A secp256k1 signature entry whose signer is not the sender must carry the signer address explicitly (`signer: <agent>`), otherwise the sidecar answers `Invalid frame transaction signature`.
+- `TXPARAM 0x06` (MAX_COST) is large: with ~1.4M gas of frame limits at 2 gwei the paymaster required ~24 mUSDC at 3000 mUSDC/ETH. Tighten the frame limits to lower the token fee.
+- VERIFY revert data is returned by the sidecar in the rejection message (`validation frame N: reverted with data 0x…`), which makes policy failures explainable.
+- Contracts are compiled with `evm_version = paris`; ETH for a contract account must come through a payable constructor (a plain transfer runs its fallback).

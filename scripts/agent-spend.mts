@@ -67,7 +67,10 @@ async function submit(label: string, payAmount: bigint, payee: Address) {
 }
 
 const before = await bal(provider);
-const ok = await submit("within policy", amount, provider);
+// A tiny per-run jitter keeps the tx hash unique: the sidecar remembers cancelled hashes and would not retry an identical tx.
+const jitter = () => BigInt(Math.floor(Math.random() * 900) + 1);
+let ok = await submit("within policy", amount + jitter(), provider);
+if (!ok) ok = await submit("within policy (retry)", amount + jitter(), provider);
 console.log("provider balance", before, "->", await bal(provider), "| vault spentToday", await pub.readContract({ address: dep.vault, abi: vaultAbi, functionName: "spentToday" }));
 const over = await submit("over per-request cap", 600_000n, provider);
 const stranger = privateKeyToAccount(generatePrivateKey()).address;

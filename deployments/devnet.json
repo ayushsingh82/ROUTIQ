@@ -1,10 +1,21 @@
 {
   "chainId": 1337,
-  "token": "0x0f39f215cab2f07323b9e2f4abcb91d73e2ba5a4",
-  "registry": "0xdf72128dfdc7bfe94013ed726844a2c3e8c3d472",
-  "paymaster": "0x0ec2e37137325adda883ce8f1e50786aa90aeb3a",
-  "vault": "0x78a200cd6afc5ebf675199f80d906daa8bf40046",
+  "staking": "0xd51c04d7a0b01124e84de152f4e56d9eecb22d2f",
+  "token": "0x89bda3a35f878382e184c67b535f844cdcc01427",
+  "registry": "0xacc2eacc85e27beff730812c003da1a7d9fa63bf",
+  "paymaster": "0x49c83d87debce75a68b88220e8ca0d9a5f83288b",
+  "vault": "0x4c860e1dabe1e6965866aa2601e9a3b99688a5ea",
   "agent": "0xf2141cb1BBc167b4D95B86cf152c8fc156b5fEdD",
-  "deployer": "0x2BedF4923b725B86767EC24bc98A89a6b85A2570",
-  "deployedAt": "2026-11-06T09:28:57.191Z"
+  "deployer": "0x6978B662AB22Dddf7c49221af51054045a8D6c7A",
+  "deployedAt": "2026-11-06T09:30:44.549Z",
+  "provider": "0xEe473D31E4EcEc9eDD84895674Aa06E22e0EBeA9",
+  "proof": {
+    "paidTx": "0x69866dacab3537a3442679965169c5f83047bc41044d189ecfcf68a69febc911",
+    "paidAmount": "250000",
+    "stakeTx": "0xe3ec3ca6ed2726215e90ceef0ddd801ed3f1ee2ec7364d248750a2fd868d69fd",
+    "rejected": [
+      "over per-request cap",
+      "provider not registered"
+    ]
+  }
 }

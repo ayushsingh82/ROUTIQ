@@ -38,9 +38,10 @@ async function deploy(name: string, args: unknown[] = [], value = 0n) {
 
 const token = await deploy("MockUSDC");
 const registry = await deploy("ProviderRegistry");
-const paymaster = await deploy("TokenPaymaster", [deployer.address, token, 3_000_000_000n], parseEther("0.3")); // 3000 mUSDC per ETH
-const vault = await deploy("AgentBudgetVault", [agent.address, token, registry, paymaster, 500_000n, 2_000_000n], parseEther("0.1")); // cap 0.50, daily 2.00 mUSDC
+const paymaster = await deploy("TokenPaymaster", [deployer.address, token, 3_000_000_000n], parseEther("0.15")); // 3000 mUSDC per ETH
+const STAKING = "0xd51c04d7a0b01124e84de152f4e56d9eecb22d2f";
+const vault = await deploy("AgentBudgetVault", [agent.address, token, registry, paymaster, STAKING, 500_000n, 2_000_000n], parseEther("0.05")); // cap 0.50, daily 2.00 mUSDC
 
-const out = { chainId: 1337, token, registry, paymaster, vault, agent: agent.address, deployer: deployer.address, deployedAt: new Date().toISOString() };
+const out = { chainId: 1337, staking: STAKING, token, registry, paymaster, vault, agent: agent.address, deployer: deployer.address, deployedAt: new Date().toISOString() };
 writeFileSync("deployments/devnet.json", JSON.stringify(out, null, 2) + "\n");
 console.log("wrote deployments/devnet.json");

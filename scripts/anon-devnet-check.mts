@@ -50,12 +50,13 @@ await step("counters: anonymised reads > 0, direct reads = 0, bootstrap counted"
   if (!(boot >= 1)) throw new Error("bootstrap read should be counted");
 });
 await step("Agent page: devnet readiness check via Anon-RPC", async () => {
-  await p.click("Agent Vault");
+  await p.click("Agent vault");
   await until("Devnet readiness");
   await p.click("Run devnet check");
-  await until("Staking registry deployed", 150000);
+  await until("AgentBudgetVault deployed", 150000);
+  await until("yes — registered", 60000);
   const t = await text();
-  console.log("      " + t.split("\n").filter((l) => /Devnet reachable|Staking registry|sidecar|minStake|bytes at|block \d+/.test(l)).slice(0, 5).join(" | "));
+  console.log("      " + t.split("\n").filter((l) => /Devnet reachable|Staking registry|sidecar|AgentBudgetVault|TokenPaymaster|ProviderRegistry|Spent today|Vault balance|bytes at|block \d+/.test(l)).slice(0, 9).join(" | "));
 });
 await step("no console errors", async () => {
   const real = p.errors.filter((e) => !/favicon|Failed to load resource/i.test(e));

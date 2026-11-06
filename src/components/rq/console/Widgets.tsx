@@ -16,8 +16,8 @@ export function ActivityChart({ rows }: { rows: UsageRow[] }) {
     setNow(Date.now());
   }, [rows]);
   const end = Math.ceil(now / span) * span;
-  const buckets = Array.from({ length: N }, (_, i) => ({ t: end - (N - i) * span, ok: 0, err: 0 }));
-  for (const r of rows) {
+  const buckets = Array.from({ length: N }, (_, i) => ({ t: now ? end - (N - i) * span : i, ok: 0, err: 0 }));
+  for (const r of now ? rows : []) {
     const i = Math.floor((r.createdAt - (end - N * span)) / span);
     if (i < 0 || i >= N) continue;
     if (r.status === "ok") buckets[i].ok += 1;
@@ -30,7 +30,7 @@ export function ActivityChart({ rows }: { rows: UsageRow[] }) {
       <CardHeader title="Request activity" sub="Last hour in 5-minute buckets" right={<Badge tone="accent">{total} req</Badge>} />
       <div className="flex h-40 items-end gap-1.5 px-5 pb-2 pt-6" role="img" aria-label="Requests per 5 minutes">
         {buckets.map((b) => (
-          <div key={b.t} className="group relative flex h-full flex-1 flex-col justify-end" title={`${new Date(b.t).toLocaleTimeString()} · ${b.ok} ok · ${b.err} failed`}>
+          <div key={b.t} className="group relative flex h-full flex-1 flex-col justify-end" title={now ? `${new Date(b.t).toLocaleTimeString()} · ${b.ok} ok · ${b.err} failed` : undefined}>
             {b.err > 0 && <div className="w-full bg-bad/80" style={{ height: `${(b.err / max) * 100}%` }} />}
             <div className={b.ok + b.err ? "w-full bg-accent" : "w-full bg-border"} style={{ height: b.ok ? `${(b.ok / max) * 100}%` : b.err ? 0 : "2px" }} />
           </div>
@@ -132,23 +132,24 @@ export function PrivacyMeter({ anon, direct, bootstrap, ready, network }: { anon
   );
 }
 
-const PROOF_TX = "0x40f16d8cf7f5940b9284a84fd5ad3de676a016ef25651fdf6f59ee0265214800";
+import dep from "../../../../deployments/devnet.json";
+const PROOF_TX = dep.proof.paidTx;
 export function FrameTxProof() {
   return (
     <Card>
       <CardHeader title="EIP-8141 Frame Tx" sub="Verified on the Alt-Mempool devnet (chain 1337)" right={<Badge tone="ok">on-chain</Badge>} />
       <div className="space-y-3 p-5 text-xs">
         <div className="flex items-center gap-2">
-          {["VERIFY", "SENDER"].map((f, i) => (
-            <div key={f} className="flex items-center gap-2">
+          {["VERIFY", "VERIFY", "SENDER"].map((f, i) => (
+            <div key={i} className="flex items-center gap-2">
               <span className="border border-border px-2.5 py-1 font-mono text-[10px] tracking-wider text-foreground">{f}</span>
-              {i === 0 && <span className="text-muted-foreground">→</span>}
+              {i < 2 && <span className="text-muted-foreground">→</span>}
             </div>
           ))}
-          <span className="ml-auto text-muted-foreground">block 0x69a</span>
+          <span className="ml-auto text-muted-foreground">vault pays provider</span>
         </div>
         <p className="break-all font-mono text-[11px] text-muted-foreground">{PROOF_TX}</p>
-        <p className="text-muted-foreground">Sent through the sidecar mempool and confirmed with per-frame receipts. Vault and paymaster enforcement is the next milestone.</p>
+        <p className="text-muted-foreground">A vault payment sponsored by the ERC-20 paymaster, confirmed on-chain. Over-cap and unregistered payments are rejected in VERIFY.</p>
         <Link href="/app/agent" className="inline-block text-[11px] uppercase tracking-wider text-accent hover:underline">
           agent spending →
         </Link>

@@ -13,6 +13,11 @@
     "provider:beta": "node --no-warnings scripts/provider-node.mts --name \"Reference Provider Beta\" --port 4102",
     "smoke": "node --no-warnings scripts/browser-smoke.mts",
     "check:anon": "node --no-warnings scripts/anon-devnet-check.mts",
+    "contracts:build": "forge build",
+    "deploy:devnet": "node --no-warnings scripts/deploy-devnet.mts",
+    "stake:devnet": "node --no-warnings scripts/stake-devnet.mts",
+    "agent:spend": "node --no-warnings scripts/agent-spend.mts 250000 30000000",
+    "check:frame": "node --no-warnings scripts/frame-tx-check.mts",
     "check:registration": "node --no-warnings scripts/registration-check.mts",
     "shot": "node --no-warnings scripts/shot.mts"
   },
